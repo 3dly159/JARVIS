@@ -367,9 +367,10 @@ def main():
     print(bold(green("   Setup complete! JARVIS is ready.")))
     print(bold(green("=" * 55)))
     print()
+    ui_url = f"http://127.0.0.1:{cfg['ui']['port']}"
     print(f"  Start JARVIS:     {bold('python main.py')}")
     print(f"  Terminal mode:    {bold('python main.py --cli')}")
-    print(f"  Web UI:           {bold(f'http://127.0.0.1:{cfg[\"ui\"][\"port\"]}')}")
+    print(f"  Web UI:           {bold(ui_url)}")
     print()
 
 
