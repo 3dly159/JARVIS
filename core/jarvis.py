@@ -345,6 +345,25 @@ class JARVISOrchestrator:
         else:
             logger.info(f"[JARVIS would say]: {text}")
 
+    def ask(self, question: str, timeout: float = 10.0) -> str:
+        """
+        Speak a question and listen for a spoken response.
+        Returns transcribed text or empty string.
+        """
+        if self.voice:
+            self.voice.speak_now(question)
+        if self.ears:
+            return self.ears.listen_once(timeout=timeout)
+        return ""
+
+    def confirm_voice(self, description: str, action_type: str = "general") -> bool:
+        """
+        Ask for voice confirmation. Convenience wrapper.
+        Returns True if approved.
+        """
+        from actions.confirm import confirm as gate
+        return gate.request(description, action_type=action_type, voice_prompt=True)
+
     def status(self) -> dict:
         return {
             "initialized": self._initialized,

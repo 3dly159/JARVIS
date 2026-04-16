@@ -66,22 +66,14 @@ class ConfirmationGate:
                 "timestamp": time.time(),
             }
 
-        # Announce via voice if available
+        # Announce via voice and listen for spoken response
         if voice_prompt:
-            try:
-                from core.jarvis import jarvis
-                if jarvis.voice:
-                    jarvis.voice.speak(
-                        f"Confirmation required, sir. {description}. "
-                        f"Say yes to confirm or no to cancel."
-                    )
-            except Exception:
-                pass
+            self._voice_prompt_and_listen(request_id, description, timeout)
 
         logger.info(f"Awaiting confirmation [{request_id}]: {description}")
         print(f"\n⚠️  JARVIS needs confirmation:\n   {description}\n   Approve? [y/N] (timeout: {timeout}s): ", end="", flush=True)
 
-        # Wait for approval (from UI, voice, or CLI)
+        # Wait for approval (from voice, UI, or CLI)
         approved = event.wait(timeout=timeout)
 
         with self._lock:
@@ -112,6 +104,81 @@ class ConfirmationGate:
             if request_id in self._pending:
                 self._pending[request_id]["approved"] = False
                 self._pending[request_id]["event"].set()
+
+    # ------------------------------------------------------------------
+    # Voice prompt + listen
+    # ------------------------------------------------------------------
+
+    def _voice_prompt_and_listen(self, request_id: str, description: str, timeout: int):
+        """
+        Speak the confirmation prompt, then listen for a yes/no response.
+        Runs in a background thread so it doesn't block the main wait.
+        """
+        def _speak_and_listen():
+            try:
+                from core.jarvis import jarvis
+
+                # Speak the request
+                if jarvis.voice:
+                    jarvis.voice.speak_now(
+                        f"Confirmation required, sir. {description}. "
+                        f"Say yes to confirm or no to cancel."
+                    )
+
+                # Listen for response (shorter timeout than full action timeout)
+                if jarvis.ears:
+                    listen_timeout = min(timeout - 2, 10)
+                    text = jarvis.ears.listen_once(timeout=float(listen_timeout))
+                    if text:
+                        self._handle_voice_response(request_id, text)
+            except Exception as e:
+                logger.debug(f"Voice confirmation error: {e}")
+
+        threading.Thread(target=_speak_and_listen, daemon=True).start()
+
+    def _handle_voice_response(self, request_id: str, text: str):
+        """
+        Parse spoken yes/no and approve/deny the request.
+        """
+        text_lower = text.lower().strip()
+        YES_WORDS = ("yes", "yeah", "yep", "confirm", "proceed", "do it",
+                     "go ahead", "approved", "sure", "okay", "ok")
+        NO_WORDS  = ("no", "nope", "cancel", "stop", "deny", "don't",
+                     "abort", "negative", "never")
+
+        if any(w in text_lower for w in YES_WORDS):
+            logger.info(f"Voice confirmation: APPROVED ('{text}')")
+            try:
+                from core.jarvis import jarvis
+                if jarvis.voice:
+                    jarvis.voice.speak("Confirmed. Proceeding, sir.")
+            except Exception:
+                pass
+            self.approve(request_id)
+
+        elif any(w in text_lower for w in NO_WORDS):
+            logger.info(f"Voice confirmation: DENIED ('{text}')")
+            try:
+                from core.jarvis import jarvis
+                if jarvis.voice:
+                    jarvis.voice.speak("Understood. Action cancelled.")
+            except Exception:
+                pass
+            self.deny(request_id)
+
+        else:
+            # Unclear response — ask once more
+            logger.debug(f"Voice confirmation unclear: '{text}' — asking again")
+            try:
+                from core.jarvis import jarvis
+                if jarvis.voice:
+                    jarvis.voice.speak_now("I didn't catch that. Yes to confirm, no to cancel.")
+                if jarvis.ears:
+                    retry = jarvis.ears.listen_once(timeout=8.0)
+                    if retry:
+                        self._handle_voice_response(request_id, retry)
+            except Exception as e:
+                logger.debug(f"Voice retry error: {e}")
 
     def cli_respond(self, response: str) -> bool:
         """Handle CLI y/n response for the most recent pending request."""
