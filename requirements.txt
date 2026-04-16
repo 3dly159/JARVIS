@@ -6,6 +6,7 @@
 # ---------------------------------------------------------------------------
 ollama                        # Ollama Python client (Mistral 7B)
 requests                      # HTTP client (used by brain.py directly)
+watchdog                      # Config file hot-reload watcher
 
 # ---------------------------------------------------------------------------
 # Memory & Data
@@ -13,13 +14,14 @@ requests                      # HTTP client (used by brain.py directly)
 pyyaml                        # config.yaml parsing
 
 # ---------------------------------------------------------------------------
-# Speech — STT + TTS
+# Speech — STT + TTS + Wake Word
 # ---------------------------------------------------------------------------
 faster-whisper                # Local Whisper STT (faster than openai-whisper)
 edge-tts                      # Microsoft Edge TTS (voice output)
 pyaudio                       # Microphone input stream
 sounddevice                   # Audio playback for TTS output
 numpy                         # Audio processing
+openwakeword                  # Wake word detection ("hey jarvis") — local, no API key
 
 # ---------------------------------------------------------------------------
 # Vision — Screen + Camera

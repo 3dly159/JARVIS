@@ -13,24 +13,12 @@ Usage:
 """
 
 import logging
-import yaml
 from pathlib import Path
 from typing import Optional
+from core.config_manager import config as cfg
 
 logger = logging.getLogger("jarvis.core")
-
 ROOT = Path(__file__).parent.parent
-CONFIG_PATH = ROOT / "config.yaml"
-
-
-def load_config() -> dict:
-    if CONFIG_PATH.exists():
-        with CONFIG_PATH.open(encoding="utf-8") as f:
-            cfg = yaml.safe_load(f)
-        logger.info("Config loaded.")
-        return cfg or {}
-    logger.warning("config.yaml not found — using defaults.")
-    return {}
 
 
 class JARVISOrchestrator:
@@ -79,7 +67,7 @@ class JARVISOrchestrator:
             logger.warning("Already initialized.")
             return
 
-        self.config = config or load_config()
+        self.config = cfg.all()
         logger.info("=" * 50)
         logger.info("  J.A.R.V.I.S. — Initializing")
         logger.info("=" * 50)
@@ -109,12 +97,13 @@ class JARVISOrchestrator:
 
     def _init_brain(self):
         from core.brain import Brain
-        cfg = self.config.get("llm", {})
         self.brain = Brain(
-            model=cfg.get("model", "mistral:7b-instruct-q4_K_M"),
-            ollama_host=cfg.get("ollama_host", "http://localhost:11434"),
-            temperature=cfg.get("temperature", 0.7),
+            model=cfg.get("llm.model"),
+            ollama_host=cfg.get("llm.ollama_host"),
+            temperature=cfg.get("llm.temperature"),
         )
+        # Hot-reload: update temperature when config changes
+        cfg.on_change("llm", lambda key, old, new: setattr(self.brain, "temperature", cfg.get("llm.temperature")) if self.brain else None)
         # Inject memory context into brain
         context_summary = self.memory.get_context_summary()
         self.brain.inject_context(context_summary)
@@ -122,10 +111,9 @@ class JARVISOrchestrator:
 
     def _init_tasks(self):
         from core.task_tracker import TaskTracker
-        cfg = self.config.get("tasks", {})
         self.tasks = TaskTracker(
-            self_ping_interval=cfg.get("self_ping_interval_seconds", 60),
-            stall_threshold=cfg.get("stall_threshold_minutes", 10),
+            self_ping_interval=cfg.get("tasks.self_ping_interval_seconds"),
+            stall_threshold=cfg.get("tasks.stall_threshold_minutes"),
             on_stall=self._on_task_stall,
             on_overdue=self._on_task_overdue,
             on_complete=self._on_task_complete,
@@ -135,10 +123,9 @@ class JARVISOrchestrator:
 
     def _init_agents(self):
         from core.agent_manager import AgentManager
-        cfg = self.config.get("agents", {})
         self.agents = AgentManager(
-            max_agents=cfg.get("max_agents", 20),
-            max_parallel=cfg.get("max_parallel", 5),
+            max_agents=cfg.get("agents.max_agents"),
+            max_parallel=cfg.get("agents.max_parallel"),
             on_agent_done=self._on_agent_done,
         )
         self.agents.start()
@@ -152,22 +139,22 @@ class JARVISOrchestrator:
         """Initialize senses. Called after core is confirmed working."""
         try:
             from senses.voice import Voice
-            voice_cfg = self.config.get("voice", {})
             self.voice = Voice(
-                voice=voice_cfg.get("tts_voice", "en-GB-RyanNeural"),
-                rate=voice_cfg.get("tts_rate", "+0%"),
-                pitch=voice_cfg.get("tts_pitch", "+0Hz"),
+                voice=cfg.get("voice.tts_voice"),
+                rate=cfg.get("voice.tts_rate"),
+                pitch=cfg.get("voice.tts_pitch"),
             )
+            # Hot-reload voice settings
+            cfg.on_change("voice", lambda k, o, n: self.voice.update(cfg.section("voice")) if self.voice else None)
             logger.info("  [senses] Voice online")
         except Exception as e:
             logger.warning(f"  [senses] Voice unavailable: {e}")
 
         try:
             from senses.ears import Ears
-            voice_cfg = self.config.get("voice", {})
             self.ears = Ears(
-                model_size=voice_cfg.get("stt_model", "base.en"),
-                device=voice_cfg.get("stt_device", "cuda"),
+                model_size=cfg.get("voice.stt_model"),
+                device=cfg.get("voice.stt_device"),
             )
             logger.info("  [senses] Ears online")
         except Exception as e:
@@ -182,10 +169,9 @@ class JARVISOrchestrator:
 
         try:
             from senses.wake import WakeListener
-            voice_cfg = self.config.get("voice", {})
             self.wake = WakeListener(
-                wake_word=voice_cfg.get("wake_word", "hey jarvis"),
-                hotkey=voice_cfg.get("hotkey", "ctrl+space"),
+                wake_word=cfg.get("voice.wake_word"),
+                hotkey=cfg.get("voice.hotkey"),
                 on_wake=self._on_wake,
             )
             logger.info("  [senses] Wake listener online")
@@ -196,13 +182,13 @@ class JARVISOrchestrator:
         """Initialize notification system."""
         try:
             from notifications.notifier import Notifier
-            notif_cfg = self.config.get("notifications", {})
             self.notifier = Notifier(
-                voice_alerts=notif_cfg.get("voice_alerts", True),
-                tray_enabled=notif_cfg.get("tray_enabled", True),
-                quiet_start=notif_cfg.get("quiet_hours_start", "23:00"),
-                quiet_end=notif_cfg.get("quiet_hours_end", "08:00"),
+                voice_alerts=cfg.get("notifications.voice_alerts"),
+                tray_enabled=cfg.get("notifications.tray_enabled"),
+                quiet_start=cfg.get("notifications.quiet_hours_start"),
+                quiet_end=cfg.get("notifications.quiet_hours_end"),
             )
+            cfg.on_change("notifications", lambda k, o, n: self.notifier.update(cfg.section("notifications")) if self.notifier else None)
             logger.info("  [notif] Notifier online")
         except Exception as e:
             logger.warning(f"  [notif] Notifier unavailable: {e}")
@@ -211,12 +197,11 @@ class JARVISOrchestrator:
         """Initialize the web UI server."""
         try:
             from ui.server import UIServer
-            ui_cfg = self.config.get("ui", {})
             self.ui = UIServer(
-                host=ui_cfg.get("host", "127.0.0.1"),
-                port=ui_cfg.get("port", 8080),
+                host=cfg.get("ui.host"),
+                port=cfg.get("ui.port"),
             )
-            logger.info(f"  [ui] UI server ready at http://{ui_cfg.get('host','127.0.0.1')}:{ui_cfg.get('port',8080)}")
+            logger.info(f"  [ui] UI server ready at http://{cfg.get('ui.host')}:{cfg.get('ui.port')}")
         except Exception as e:
             logger.warning(f"  [ui] UI unavailable: {e}")
 
