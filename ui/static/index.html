@@ -5,100 +5,133 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>J.A.R.V.I.S.</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>">
 </head>
 <body>
-  <div id="app">
-    <!-- Sidebar -->
-    <aside id="sidebar">
-      <div id="sidebar-header">
-        <span class="logo">J.A.R.V.I.S.</span>
-        <span class="logo-sub">Just A Rather Very Intelligent System</span>
+
+  <!-- Boot Overlay -->
+  <div id="bootOverlay" class="boot-overlay visible">
+    <div class="boot-content">
+      <div class="boot-glitch" data-text="SYSTEM BOOTING">SYSTEM BOOTING</div>
+      <div class="boot-status" id="bootStatus">INITIALIZING NEURAL CORES...</div>
+      <div class="boot-progress-container">
+        <div id="bootProgress" class="boot-progress"></div>
       </div>
-      <nav>
-        <button class="nav-btn active" data-panel="chat">💬 Chat</button>
-        <button class="nav-btn" data-panel="tasks">📋 Tasks</button>
-        <button class="nav-btn" data-panel="agents">🤖 Agents</button>
-        <button class="nav-btn" data-panel="memory">🧠 Memory</button>
-        <button class="nav-btn" data-panel="system">⚙️ System</button>
-        <button class="nav-btn" data-panel="settings">🔧 Settings</button>
-      </nav>
-      <div id="status-bar">
-        <span id="status-dot" class="dot offline"></span>
-        <span id="status-text">Connecting...</span>
+      <div class="boot-specs">
+        <span id="bootEngine">LOADING J.A.R.V.I.S.</span>
+        <span class="boot-version">v1.0-NEURAL</span>
       </div>
-    </aside>
+    </div>
+  </div>
 
-    <!-- Main content -->
-    <main id="main">
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-logo">◆ J.A.R.V.I.S.</div>
+    <div class="topbar-right">
+      <div class="connection-dot" id="connectionDot"></div>
+      <span class="connection-label" id="connectionLabel">OFFLINE</span>
+      <button class="icon-btn" id="dashboardBtn" title="Dashboard">⊞</button>
+      <button class="icon-btn" id="fullscreenBtn" title="Toggle Fullscreen">⛶</button>
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+  </div>
 
-      <!-- Chat Panel -->
-      <section id="panel-chat" class="panel active">
-        <div id="chat-header">
-          <span>Chat</span>
-          <select id="session-select"><option value="default">Default Session</option></select>
-        </div>
-        <div id="chat-messages"></div>
-        <div id="chat-input-area">
-          <textarea id="chat-input" placeholder="Talk to JARVIS..." rows="2"></textarea>
-          <button id="send-btn">Send</button>
-        </div>
-      </section>
+  <!-- Orb Canvas -->
+  <canvas id="orbCanvas"></canvas>
 
-      <!-- Tasks Panel -->
-      <section id="panel-tasks" class="panel">
-        <div class="panel-header">
-          <h2>Task Tracker</h2>
-          <button class="btn-primary" onclick="createTask()">+ New Task</button>
-        </div>
-        <div id="tasks-list"></div>
-      </section>
+  <!-- State label -->
+  <div class="orb-status" id="orbStatus">INITIALIZING...</div>
 
-      <!-- Agents Panel -->
-      <section id="panel-agents" class="panel">
-        <div class="panel-header">
-          <h2>Agents</h2>
-          <div id="agents-stats"></div>
-        </div>
-        <div id="agents-list"></div>
-      </section>
+  <!-- Transcript panel -->
+  <div class="transcript-panel" id="transcriptPanel">
+    <div class="transcript-inner" id="transcriptInner">
+      <div class="transcript-welcome">
+        <span class="t-jarvis">J.A.R.V.I.S.</span> — All systems operational. Say <em>"Hey JARVIS"</em> to begin, sir.
+      </div>
+    </div>
+    <!-- Text input fallback -->
+    <div class="text-input-bar">
+      <input type="text" id="textInput" placeholder='Type a message or say "Hey JARVIS"...' autocomplete="off">
+      <button id="sendBtn">▶</button>
+      <button id="micBtn" title="Push to talk">🎙</button>
+    </div>
+  </div>
 
-      <!-- Memory Panel -->
-      <section id="panel-memory" class="panel">
-        <div class="panel-header"><h2>Memory</h2></div>
-        <div id="memory-tabs">
-          <button class="tab-btn active" data-tab="daily">Daily Log</button>
-          <button class="tab-btn" data-tab="palace">Memory Palace</button>
+  <!-- Dashboard Panel (overlay) -->
+  <div class="dashboard-overlay" id="dashboardOverlay">
+    <div class="dashboard">
+      <div class="dash-header">
+        <span>⊞ DASHBOARD</span>
+        <button class="modal-close" id="closeDashboard">✕</button>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-card" id="dashTasks">
+          <div class="dash-card-title">📋 TASKS</div>
+          <div class="dash-card-body" id="dashTasksBody">Loading...</div>
         </div>
-        <div id="memory-daily" class="tab-content active">
-          <pre id="daily-log-content">Loading...</pre>
+        <div class="dash-card" id="dashAgents">
+          <div class="dash-card-title">🤖 AGENTS</div>
+          <div class="dash-card-body" id="dashAgentsBody">Loading...</div>
         </div>
-        <div id="memory-palace" class="tab-content">
-          <div id="palace-search">
-            <input type="text" id="palace-query" placeholder="Search Memory Palace...">
-            <button onclick="searchPalace()">Search</button>
-          </div>
-          <div id="palace-items"></div>
+        <div class="dash-card" id="dashSystem">
+          <div class="dash-card-title">⚙ SYSTEM</div>
+          <div class="dash-card-body" id="dashSystemBody">Loading...</div>
         </div>
-      </section>
+        <div class="dash-card" id="dashMemory">
+          <div class="dash-card-title">🧠 MEMORY</div>
+          <div class="dash-card-body" id="dashMemoryBody">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      <!-- System Panel -->
-      <section id="panel-system" class="panel">
-        <div class="panel-header"><h2>System</h2></div>
-        <div id="system-stats"></div>
-        <div id="system-notifications">
-          <h3>Recent Notifications</h3>
-          <div id="notif-list"></div>
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span>⚙ SYSTEM CONFIGURATION</span>
+        <button class="modal-close" id="closeSettings">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>TTS VOICE</label>
+          <select id="cfgVoice">
+            <option value="en-GB-RyanNeural">en-GB-RyanNeural — British Male (MCU JARVIS)</option>
+            <option value="en-US-GuyNeural">en-US-GuyNeural — American Male</option>
+            <option value="en-GB-SoniaNeural">en-GB-SoniaNeural — British Female</option>
+            <option value="en-US-JennyNeural">en-US-JennyNeural — American Female</option>
+          </select>
         </div>
-      </section>
-
-      <!-- Settings Panel -->
-      <section id="panel-settings" class="panel">
-        <div class="panel-header"><h2>Settings</h2></div>
-        <div id="settings-form"></div>
-        <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
-      </section>
-
-    </main>
+        <div class="form-group">
+          <label>WHISPER MODEL</label>
+          <select id="cfgWhisper">
+            <option value="tiny.en">tiny.en — Fastest</option>
+            <option value="base.en" selected>base.en — Balanced</option>
+            <option value="small.en">small.en — Accurate</option>
+            <option value="medium.en">medium.en — Best</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>WAKE WORD</label>
+          <input type="text" id="cfgWakeWord" value="hey jarvis">
+        </div>
+        <div class="form-group">
+          <label>AUTO-LISTEN AFTER RESPONSE</label>
+          <label class="toggle">
+            <input type="checkbox" id="cfgAutoListen" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>USE BROWSER TTS (fallback if server TTS fails)</label>
+          <label class="toggle">
+            <input type="checkbox" id="cfgBrowserTts">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <button class="btn-save" id="saveSettings">SAVE CONFIGURATION</button>
+      </div>
+    </div>
   </div>
 
   <script src="/static/app.js"></script>

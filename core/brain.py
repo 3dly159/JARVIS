@@ -27,6 +27,28 @@ def get_system_prompt() -> str:
     return context_loader.load()
 
 
+def _build_tools_prompt() -> str:
+    """Build tool usage instructions for the system prompt."""
+    try:
+        from tools.registry import registry
+        tools = registry.get_all()
+        if not tools:
+            return ""
+        lines = [
+            "\n\n## Tool Usage",
+            "When you need to use a tool, respond with ONLY this JSON format (no other text):",
+            '{"tool": "tool_name", "params": {"param": "value"}}',
+            "After receiving a tool result, continue your response naturally.",
+            "\nAvailable tools:",
+        ]
+        for t in tools:
+            params = ", ".join(f"{k}: {v}" for k, v in t["params"].items())
+            lines.append(f"  - {t['name']}({params}): {t['description']}")
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
 # ---------------------------------------------------------------------------
 # Tool Registry (populated by tools/registry.py at runtime)
 # ---------------------------------------------------------------------------
@@ -182,18 +204,19 @@ class Brain:
                 self.on_token(token)
         return response.strip()
 
-    # ----- Public: chat (conversational, with history) -----
+    # ----- Public: chat (conversational, with history + tool-calling loop) -----
 
     def chat(self, user_message: str) -> Generator[str, None, None]:
         """
         Conversational interface — maintains history.
         Yields tokens for streaming to UI/voice.
-        Automatically appends to history when done.
+        Handles tool calls automatically in a loop.
         """
         self.history.add("user", user_message)
 
+        system = get_system_prompt() + _build_tools_prompt()
         messages = [
-            {"role": "system", "content": get_system_prompt()},
+            {"role": "system", "content": system},
             *self.history.get(),
         ]
 
@@ -204,7 +227,27 @@ class Brain:
                 self.on_token(token)
             yield token
 
-        self.history.add("assistant", full_response.strip())
+        full_response = full_response.strip()
+
+        # Tool-calling loop
+        tool_result = self._try_tool_call(full_response)
+        if tool_result is not None:
+            # Inject tool result and get follow-up response
+            self.history.add("assistant", full_response)
+            self.history.add("user", f"[Tool result]: {tool_result}")
+            messages2 = [
+                {"role": "system", "content": system},
+                *self.history.get(),
+            ]
+            follow_up = ""
+            for token in self._stream(messages2):
+                follow_up += token
+                if self.on_token:
+                    self.on_token(token)
+                yield token
+            self.history.add("assistant", follow_up.strip())
+        else:
+            self.history.add("assistant", full_response)
 
     # ----- Public: chat_full (non-streaming, returns complete string) -----
 
@@ -215,6 +258,36 @@ class Brain:
         return "".join(self.chat(user_message))
 
     # ----- Context injection -----
+
+    def _try_tool_call(self, response: str):
+        """Check if response is a tool call JSON. Execute it and return result or None."""
+        import json, re
+        try:
+            # Extract JSON from response (handles markdown code blocks too)
+            match = re.search(r'\{\s*"tool"\s*:', response)
+            if not match:
+                return None
+            json_str = response[match.start():]
+            # Find balanced closing brace
+            depth, end = 0, -1
+            for i, c in enumerate(json_str):
+                if c == '{': depth += 1
+                elif c == '}': depth -= 1
+                if depth == 0: end = i + 1; break
+            if end == -1:
+                return None
+            call = json.loads(json_str[:end])
+            tool_name = call.get("tool")
+            params = call.get("params", {})
+            if not tool_name:
+                return None
+            from tools.registry import registry
+            result = registry.call(tool_name, **params)
+            logger.info(f"Tool call: {tool_name}({params}) -> {str(result)[:80]}")
+            return result
+        except Exception as e:
+            logger.debug(f"Tool call parse failed: {e}")
+            return None
 
     def inject_context(self, context: str):
         """

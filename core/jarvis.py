@@ -254,34 +254,31 @@ class JARVISOrchestrator:
         Returns full response string.
         """
         self._require_initialized()
-
-        # Log user input
         self.memory.log_conversation("user", user_input)
+        self._broadcast_state("thinking")
 
-        # Inject fresh task summary before responding
         task_summary = self.tasks.summary()
         if task_summary != "No active tasks.":
             self.brain.inject_context(f"Current tasks:\n{task_summary}")
 
-        # Get response
         response = self.brain.chat_full(user_input)
-
-        # Log JARVIS response
         self.memory.log_conversation("jarvis", response)
 
-        # Speak if voice is available
         if self.voice:
+            self._broadcast_state("speaking")
             self.voice.speak(response)
 
+        self._broadcast_state("standby")
         return response
 
     def chat_stream(self, user_input: str):
         """
         Streaming version of chat. Yields tokens as they arrive.
-        Logs conversation when complete.
+        Logs conversation when complete. Broadcasts state changes.
         """
         self._require_initialized()
         self.memory.log_conversation("user", user_input)
+        self._broadcast_state("thinking")
 
         full_response = ""
         for token in self.brain.chat(user_input):
@@ -291,7 +288,10 @@ class JARVISOrchestrator:
         self.memory.log_conversation("jarvis", full_response)
 
         if self.voice and full_response:
+            self._broadcast_state("speaking")
             self.voice.speak(full_response)
+
+        self._broadcast_state("standby")
 
     # ------------------------------------------------------------------
     # Event handlers (called by modules)
@@ -333,6 +333,14 @@ class JARVISOrchestrator:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _broadcast_state(self, state: str):
+        """Broadcast state to all connected UI clients."""
+        try:
+            from ui.routes.state import set_state_sync
+            set_state_sync(state)
+        except Exception:
+            pass
 
     def _require_initialized(self):
         if not self._initialized:
