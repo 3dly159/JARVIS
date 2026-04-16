@@ -22,6 +22,7 @@ pyaudio                       # Microphone input stream
 sounddevice                   # Audio playback for TTS output
 numpy                         # Audio processing
 openwakeword                  # Wake word detection ("hey jarvis") — local, no API key
+keyboard                      # Global hotkey listener (fallback to wake word)
 
 # ---------------------------------------------------------------------------
 # Vision — Screen + Camera
