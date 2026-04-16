@@ -40,7 +40,7 @@ def create_app():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     # Register all route modules
-    from ui.routes import chat, sessions, settings, agents, tasks, memory, system
+    from ui.routes import chat, sessions, settings, agents, tasks, memory, system, skills
     app.include_router(chat.router,     prefix="/api/chat",     tags=["chat"])
     app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
     app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
@@ -48,6 +48,7 @@ def create_app():
     app.include_router(tasks.router,    prefix="/api/tasks",    tags=["tasks"])
     app.include_router(memory.router,   prefix="/api/memory",   tags=["memory"])
     app.include_router(system.router,   prefix="/api/system",   tags=["system"])
+    app.include_router(skills.router,   prefix="/api/skills",   tags=["skills"])
 
     # Serve main UI
     @app.get("/")

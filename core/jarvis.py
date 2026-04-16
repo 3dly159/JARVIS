@@ -49,6 +49,10 @@ class JARVISOrchestrator:
         self.actions      = None
         self.tools        = None
 
+        # Skills
+        self.skills       = None
+        self.skill_manager = None
+
         # Notifications
         self.notifier     = None
 
@@ -77,6 +81,7 @@ class JARVISOrchestrator:
         self._init_brain()
         self._init_tasks()
         self._init_agents()
+        self._init_skills()
 
         self._initialized = True
         self.memory.log("JARVIS online.", category="system")
@@ -130,6 +135,39 @@ class JARVISOrchestrator:
         )
         self.agents.start()
         logger.info("  [5/5] Agent manager online")
+
+    def _init_skills(self):
+        from skills.loader import skill_loader
+        from skills.manager import skill_manager
+        self.skills = skill_loader
+        self.skill_manager = skill_manager
+        skill_loader.load_all()
+        # Inject skill context into brain
+        skill_context = skill_loader.get_context()
+        if skill_context and skill_context != "No skills loaded.":
+            self.brain.inject_context(f"Skills available:\n{skill_context}")
+
+        # Register skill tools with registry
+        from tools.registry import registry
+        registry.register(
+            name="install_skill",
+            description="Install a new skill from ClawHub by name.",
+            handler=lambda skill_name, **_: skill_manager.install(skill_name)["message"],
+            params={"skill_name": "name of the skill to install from clawhub"},
+        )
+        registry.register(
+            name="search_skills",
+            description="Search ClawHub for available skills.",
+            handler=lambda query, **_: skill_manager.search(query),
+            params={"query": "what kind of skill to search for"},
+        )
+        registry.register(
+            name="list_skills",
+            description="List all currently installed JARVIS skills.",
+            handler=lambda **_: skill_loader.get_summary(),
+            params={},
+        )
+        logger.info(f"  [+] Skills loaded: {skill_loader.status()['loaded']} skill(s)")
 
     # ------------------------------------------------------------------
     # Late-init senses (called after core is up)
@@ -314,6 +352,7 @@ class JARVISOrchestrator:
             "memory": self.memory.status() if self.memory else None,
             "tasks": self.tasks.status() if self.tasks else None,
             "agents": self.agents.status() if self.agents else None,
+            "skills": self.skills.status() if self.skills else None,
             "voice": self.voice is not None,
             "ears": self.ears is not None,
             "eyes": self.eyes is not None,
