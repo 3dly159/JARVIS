@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J.A.R.V.I.S.</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        <span class="logo">J.A.R.V.I.S.</span>
+        <span class="logo-sub">Just A Rather Very Intelligent System</span>
+      </div>
+      <nav>
+        <button class="nav-btn active" data-panel="chat">💬 Chat</button>
+        <button class="nav-btn" data-panel="tasks">📋 Tasks</button>
+        <button class="nav-btn" data-panel="agents">🤖 Agents</button>
+        <button class="nav-btn" data-panel="memory">🧠 Memory</button>
+        <button class="nav-btn" data-panel="system">⚙️ System</button>
+        <button class="nav-btn" data-panel="settings">🔧 Settings</button>
+      </nav>
+      <div id="status-bar">
+        <span id="status-dot" class="dot offline"></span>
+        <span id="status-text">Connecting...</span>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main id="main">
+
+      <!-- Chat Panel -->
+      <section id="panel-chat" class="panel active">
+        <div id="chat-header">
+          <span>Chat</span>
+          <select id="session-select"><option value="default">Default Session</option></select>
+        </div>
+        <div id="chat-messages"></div>
+        <div id="chat-input-area">
+          <textarea id="chat-input" placeholder="Talk to JARVIS..." rows="2"></textarea>
+          <button id="send-btn">Send</button>
+        </div>
+      </section>
+
+      <!-- Tasks Panel -->
+      <section id="panel-tasks" class="panel">
+        <div class="panel-header">
+          <h2>Task Tracker</h2>
+          <button class="btn-primary" onclick="createTask()">+ New Task</button>
+        </div>
+        <div id="tasks-list"></div>
+      </section>
+
+      <!-- Agents Panel -->
+      <section id="panel-agents" class="panel">
+        <div class="panel-header">
+          <h2>Agents</h2>
+          <div id="agents-stats"></div>
+        </div>
+        <div id="agents-list"></div>
+      </section>
+
+      <!-- Memory Panel -->
+      <section id="panel-memory" class="panel">
+        <div class="panel-header"><h2>Memory</h2></div>
+        <div id="memory-tabs">
+          <button class="tab-btn active" data-tab="daily">Daily Log</button>
+          <button class="tab-btn" data-tab="palace">Memory Palace</button>
+        </div>
+        <div id="memory-daily" class="tab-content active">
+          <pre id="daily-log-content">Loading...</pre>
+        </div>
+        <div id="memory-palace" class="tab-content">
+          <div id="palace-search">
+            <input type="text" id="palace-query" placeholder="Search Memory Palace...">
+            <button onclick="searchPalace()">Search</button>
+          </div>
+          <div id="palace-items"></div>
+        </div>
+      </section>
+
+      <!-- System Panel -->
+      <section id="panel-system" class="panel">
+        <div class="panel-header"><h2>System</h2></div>
+        <div id="system-stats"></div>
+        <div id="system-notifications">
+          <h3>Recent Notifications</h3>
+          <div id="notif-list"></div>
+        </div>
+      </section>
+
+      <!-- Settings Panel -->
+      <section id="panel-settings" class="panel">
+        <div class="panel-header"><h2>Settings</h2></div>
+        <div id="settings-form"></div>
+        <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
