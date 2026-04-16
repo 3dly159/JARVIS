@@ -1,0 +1,68 @@
+# J.A.R.V.I.S. Requirements
+# Install with: pip install -r requirements.txt
+
+# ---------------------------------------------------------------------------
+# Core — LLM
+# ---------------------------------------------------------------------------
+ollama                        # Ollama Python client (Mistral 7B)
+requests                      # HTTP client (used by brain.py directly)
+
+# ---------------------------------------------------------------------------
+# Memory & Data
+# ---------------------------------------------------------------------------
+pyyaml                        # config.yaml parsing
+
+# ---------------------------------------------------------------------------
+# Speech — STT + TTS
+# ---------------------------------------------------------------------------
+faster-whisper                # Local Whisper STT (faster than openai-whisper)
+edge-tts                      # Microsoft Edge TTS (voice output)
+pyaudio                       # Microphone input stream
+sounddevice                   # Audio playback for TTS output
+numpy                         # Audio processing
+
+# ---------------------------------------------------------------------------
+# Vision — Screen + Camera
+# ---------------------------------------------------------------------------
+mss                           # Fast screen capture
+opencv-python                 # Camera capture + image processing
+Pillow                        # Image handling
+
+# ---------------------------------------------------------------------------
+# Actions — Keyboard, Mouse, Apps
+# ---------------------------------------------------------------------------
+pyautogui                     # Keyboard + mouse control
+pygetwindow                   # Window management (open/close/focus apps)
+
+# ---------------------------------------------------------------------------
+# System Monitoring
+# ---------------------------------------------------------------------------
+psutil                        # CPU, RAM, disk, process monitoring
+pynvml                        # NVIDIA GPU / VRAM monitoring
+
+# ---------------------------------------------------------------------------
+# UI — Web Dashboard
+# ---------------------------------------------------------------------------
+fastapi                       # Backend API server
+uvicorn[standard]             # ASGI server for FastAPI
+websockets                    # Live streaming to UI
+python-multipart              # File uploads in FastAPI
+jinja2                        # HTML templating (optional)
+
+# ---------------------------------------------------------------------------
+# Tools
+# ---------------------------------------------------------------------------
+playwright                    # Browser automation
+duckduckgo-search             # Web search (no API key needed)
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+plyer                         # Cross-platform system tray + notifications
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+python-dotenv                 # .env file support
+colorlog                      # Colored logging output
+schedule                      # Simple task scheduling (used by task_tracker)

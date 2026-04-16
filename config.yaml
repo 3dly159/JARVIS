@@ -1,0 +1,99 @@
+# J.A.R.V.I.S. Configuration
+# Edit this file to customize your assistant.
+
+# ---------------------------------------------------------------------------
+# LLM
+# ---------------------------------------------------------------------------
+llm:
+  model: "mistral:7b-instruct-q4_K_M"
+  ollama_host: "http://localhost:11434"
+  temperature: 0.7
+  context_window: 8192
+
+# ---------------------------------------------------------------------------
+# Voice
+# ---------------------------------------------------------------------------
+voice:
+  tts_engine: "edge-tts"
+  tts_voice: "en-GB-RyanNeural"   # British male voice — closest to MCU JARVIS
+  tts_rate: "+0%"
+  tts_pitch: "+0Hz"
+  stt_model: "base.en"            # faster-whisper model size: tiny/base/small/medium
+  stt_device: "cuda"              # cuda or cpu
+  wake_word: "hey jarvis"
+  hotkey: "ctrl+space"
+
+# ---------------------------------------------------------------------------
+# UI
+# ---------------------------------------------------------------------------
+ui:
+  host: "127.0.0.1"
+  port: 8080
+  open_browser_on_start: true
+
+# ---------------------------------------------------------------------------
+# Agents
+# ---------------------------------------------------------------------------
+agents:
+  max_agents: 20
+  max_parallel: 5
+
+# ---------------------------------------------------------------------------
+# Memory
+# ---------------------------------------------------------------------------
+memory:
+  daily_log_dir: "memory/"
+  palace_dir: "memory/palace/"
+  summarize_after_days: 7         # Auto-summarize daily logs older than N days
+
+# ---------------------------------------------------------------------------
+# System Monitoring
+# ---------------------------------------------------------------------------
+monitor:
+  enabled: true
+  check_interval_seconds: 30
+  cpu_alert_threshold: 90         # % CPU usage before alert
+  ram_alert_threshold: 85         # % RAM usage before alert
+  vram_alert_threshold: 90        # % VRAM usage before alert
+
+# ---------------------------------------------------------------------------
+# Task Tracker
+# ---------------------------------------------------------------------------
+tasks:
+  self_ping_interval_seconds: 60  # How often JARVIS checks its own tasks
+  stall_threshold_minutes: 10     # Mark task stalled after N minutes of no progress
+
+# ---------------------------------------------------------------------------
+# Actions
+# ---------------------------------------------------------------------------
+actions:
+  require_confirmation:           # Action types that need user approval
+    - "shell_command"
+    - "file_delete"
+    - "keyboard_mouse"
+  confirmation_timeout_seconds: 30
+
+# ---------------------------------------------------------------------------
+# Self-Modification
+# ---------------------------------------------------------------------------
+self_mod:
+  enabled: true
+  sandbox_before_apply: true      # Always test changes in sandbox first
+  backup_on_modify: true          # Keep backup of files before editing
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+notifications:
+  tray_enabled: true
+  voice_alerts: true
+  quiet_hours_start: "23:00"
+  quiet_hours_end: "08:00"
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+logging:
+  level: "INFO"                   # DEBUG / INFO / WARNING / ERROR
+  log_dir: "logs/"
+  log_conversations: true
