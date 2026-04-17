@@ -17,7 +17,7 @@ logger = logging.getLogger("jarvis.tools.search")
 
 
 class WebSearch:
-    """DuckDuckGo search wrapper."""
+    """DuckDuckGo search wrapper (using ddgs)."""
 
     def __init__(self, max_results: int = 5):
         self.max_results = max_results
@@ -27,7 +27,7 @@ class WebSearch:
         Search DuckDuckGo. Returns list of {title, url, body} dicts.
         """
         try:
-            from duckduckgo_search import DDGS
+            from ddgs import DDGS
             results = []
             with DDGS() as ddgs:
                 for r in ddgs.text(query, max_results=max_results or self.max_results):
@@ -39,7 +39,7 @@ class WebSearch:
             logger.info(f"Search '{query[:40]}' → {len(results)} results")
             return results
         except ImportError:
-            logger.error("duckduckgo-search not installed. Run: pip install duckduckgo-search")
+            logger.error("ddgs not installed. Run: pip install ddgs")
             return []
         except Exception as e:
             logger.error(f"Search error: {e}")
@@ -65,7 +65,7 @@ class WebSearch:
     def news(self, query: str, max_results: int = 5) -> list[dict]:
         """Search recent news."""
         try:
-            from duckduckgo_search import DDGS
+            from ddgs import DDGS
             results = []
             with DDGS() as ddgs:
                 for r in ddgs.news(query, max_results=max_results):

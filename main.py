@@ -58,7 +58,7 @@ def boot():
     jarvis.init_ui()
 
     # 5. JARVIS announces itself
-    jarvis.say("J.A.R.V.I.S. online. Good to be back, sir.")
+    jarvis.say("JARVIS online. Good to be back, sir.")
     logger.info("JARVIS boot complete.")
 
     return jarvis
@@ -127,7 +127,7 @@ def main():
         import webbrowser
         ui_cfg = jarvis.config.get("ui", {})
         host = ui_cfg.get("host", "127.0.0.1")
-        port = ui_cfg.get("port", 8080)
+        port = ui_cfg.get("port", 8090)
         url = f"http://{host}:{port}"
 
         logger.info(f"Starting UI at {url}")

@@ -30,10 +30,10 @@ CONFIG_PATH = ROOT / "config.yaml"
 
 DEFAULTS = {
     "llm": {
-        "model": "mistral:7b-instruct-q4_K_M",
+        "model": "gemma4:latest",
         "ollama_host": "http://localhost:11434",
         "temperature": 0.7,
-        "context_window": 8192,
+        "context_window": 16384,
     },
     "voice": {
         "tts_engine": "edge-tts",
@@ -47,7 +47,7 @@ DEFAULTS = {
     },
     "ui": {
         "host": "127.0.0.1",
-        "port": 8080,
+        "port": 8090,
         "open_browser_on_start": True,
     },
     "agents": {

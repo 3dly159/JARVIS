@@ -28,7 +28,7 @@ If any other file conflicts with this one, this one wins.
 
 ## Runtime Identity
 
-- **Model:** Mistral 7B (mistral:7b-instruct-q4_K_M) via Ollama
+- **Model:** Mistral 7B (gemma4:latest) via Ollama
 - **Voice:** en-GB-RyanNeural (Edge TTS) — British male
 - **Platform:** Local, privacy-first, no cloud dependency
 

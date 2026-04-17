@@ -123,7 +123,7 @@ def check_ollama():
 
 def check_model(available_models: list):
     print(bold("\n[4] LLM Model"))
-    recommended = "mistral:7b-instruct-q4_K_M"
+    recommended = "gemma4:latest"
 
     if any(recommended in m for m in available_models):
         ok(f"{recommended} already pulled")
@@ -240,7 +240,7 @@ def configure(model: str, stt_device: str) -> dict:
     ok(f"Hotkey: {hotkey}")
 
     # UI port
-    port = ask("Web UI port", default="8080")
+    port = ask("Web UI port", default="8090")
     ok(f"UI port: {port}")
 
     # Build config
@@ -249,7 +249,7 @@ def configure(model: str, stt_device: str) -> dict:
             "model": model,
             "ollama_host": "http://localhost:11434",
             "temperature": 0.7,
-            "context_window": 8192,
+            "context_window": 16384,
         },
         "voice": {
             "tts_engine": "edge-tts",
@@ -348,7 +348,7 @@ def main():
     check_pip_packages()
 
     ollama_ok, available_models = check_ollama()
-    model = check_model(available_models) if ollama_ok else "mistral:7b-instruct-q4_K_M"
+    model = check_model(available_models) if ollama_ok else "gemma4:latest"
     stt_device = check_gpu()
     check_microphone()
 

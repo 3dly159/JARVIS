@@ -78,6 +78,7 @@ class JARVISOrchestrator:
 
         self._init_context()
         self._init_memory()
+        self._init_tools()
         self._init_brain()
         self._init_tasks()
         self._init_agents()
@@ -100,15 +101,34 @@ class JARVISOrchestrator:
         self.memory = Memory()
         logger.info("  [2/5] Memory online")
 
+    def _init_tools(self):
+        from tools.registry import registry
+        # Import tool modules to trigger registration
+        from tools import file_browser, web_search, browser_control
+        self.tools = registry
+        logger.info("  [+] Tools registered")
+
     def _init_brain(self):
         from core.brain import Brain
-        self.brain = Brain(
-            model=cfg.get("llm.model"),
-            ollama_host=cfg.get("llm.ollama_host"),
-            temperature=cfg.get("llm.temperature"),
-        )
-        # Hot-reload: update temperature when config changes
-        cfg.on_change("llm", lambda key, old, new: setattr(self.brain, "temperature", cfg.get("llm.temperature")) if self.brain else None)
+        self.brain = Brain()
+        # Hot-reload: update brain fields when relevant config changes
+        def _on_nvidia_change(key, old, new):
+            if not self.brain:
+                return
+            if key == "nvidia.temperature":
+                self.brain.temperature = new
+            elif key == "nvidia.top_p":
+                self.brain.top_p = new
+            elif key == "nvidia.max_tokens":
+                self.brain.max_tokens = new
+            elif key == "nvidia.enable_thinking":
+                self.brain.enable_thinking = new
+            elif key == "nvidia.reasoning_budget":
+                self.brain.reasoning_budget = new
+            elif key == "nvidia.model":
+                # model change would require re-instantiating; for simplicity we ignore or could restart.
+                pass
+        cfg.on_change("nvidia", _on_nvidia_change)
         # Inject memory context into brain
         context_summary = self.memory.get_context_summary()
         self.brain.inject_context(context_summary)
@@ -234,7 +254,7 @@ class JARVISOrchestrator:
     def init_ui(self):
         """Initialize the web UI server."""
         try:
-            from ui.server import UIServer
+            from api.server import UIServer
             self.ui = UIServer(
                 host=cfg.get("ui.host"),
                 port=cfg.get("ui.port"),

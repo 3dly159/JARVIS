@@ -30,7 +30,7 @@ class ConfirmationGate:
         require_for: list = None,
     ):
         self.timeout_seconds = timeout_seconds
-        self.require_for = require_for or ["shell_command", "file_delete", "keyboard_mouse"]
+        self.require_for = require_for or ["shell_command", "file_delete", "file_write", "file_move", "keyboard_mouse", "app_launch", "process_kill"]
         self._pending: dict[str, dict] = {}  # request_id → {event, approved}
         self._lock = threading.Lock()
 
@@ -127,7 +127,8 @@ class ConfirmationGate:
 
                 # Listen for response (shorter timeout than full action timeout)
                 if jarvis.ears:
-                    listen_timeout = min(timeout - 2, 10)
+                    # Ensure we have at least a couple seconds to listen, but not more than remaining time
+                    listen_timeout = max(0.1, min(timeout - 2, 10))
                     text = jarvis.ears.listen_once(timeout=float(listen_timeout))
                     if text:
                         self._handle_voice_response(request_id, text)

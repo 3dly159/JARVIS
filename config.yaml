@@ -5,10 +5,10 @@
 # LLM
 # ---------------------------------------------------------------------------
 llm:
-  model: "mistral:7b-instruct-q4_K_M"
+  model: "gemma4:latest"
   ollama_host: "http://localhost:11434"
   temperature: 0.7
-  context_window: 8192
+  context_window: 16384
 
 # ---------------------------------------------------------------------------
 # Voice
@@ -28,7 +28,7 @@ voice:
 # ---------------------------------------------------------------------------
 ui:
   host: "127.0.0.1"
-  port: 8080
+  port: 8090
   open_browser_on_start: true
 
 # ---------------------------------------------------------------------------
@@ -97,3 +97,16 @@ logging:
   level: "INFO"                   # DEBUG / INFO / WARNING / ERROR
   log_dir: "logs/"
   log_conversations: true
+
+# ---------------------------------------------------------------------------
+# NVIDIA LLM (optional override for brain)
+# ---------------------------------------------------------------------------
+nvidia:
+  model: "nvidia/nemotron-3-super-120b-a12b"
+  base_url: "https://integrate.api.nvidia.com/v1"
+  api_key: "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"   # set via environment variable or replace with actual key
+  temperature: 1.0
+  top_p: 0.95
+  max_tokens: 131072
+  enable_thinking: false
+  reasoning_budget: 16384

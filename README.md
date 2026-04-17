@@ -23,7 +23,7 @@ A fully local, privacy-first personal AI assistant. JARVIS can speak, listen, se
 | 🤖 **Agents** | Up to 20 agents, 5 running in parallel, auto-queued |
 | 📋 **Tasks** | Autonomous task tracking with self-ping and stall detection |
 | 🔄 **Self-mod** | JARVIS reads and edits its own codebase (sandboxed + backed up) |
-| 🖥️ **UI** | Web dashboard at localhost:8080 (chat, tasks, agents, memory, settings) |
+| 🖥️ **UI** | Web dashboard at localhost:8090 (chat, tasks, agents, memory, settings) |
 | ⚙️ **Config** | Hot-reloading config — change settings live without restart |
 | 🛡️ **Privacy** | Fully local — nothing leaves your machine |
 
@@ -64,7 +64,7 @@ The setup wizard will:
 ### Run
 
 ```bash
-# Full UI mode (opens browser at http://localhost:8080)
+# Full UI mode (opens browser at http://localhost:8090)
 python main.py
 
 # Terminal/CLI mode (no UI)
@@ -150,7 +150,7 @@ Key settings:
 
 ```yaml
 llm:
-  model: "mistral:7b-instruct-q4_K_M"
+  model: "gemma4:latest"
   temperature: 0.7
 
 voice:
@@ -160,7 +160,7 @@ voice:
   hotkey: "ctrl+space"
 
 ui:
-  port: 8080
+  port: 8090
 
 agents:
   max_agents: 20

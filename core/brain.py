@@ -1,22 +1,29 @@
 """
 core/brain.py - JARVIS Brain (LLM Interface)
-Wraps Ollama + Mistral 7B with streaming, tool-calling, and MCU-style personality.
+Wraps OpenAI-compatible endpoint (NVIDIA Nemotron) with streaming, tool-calling, and MCU-style personality.
 """
 
 import json
 import logging
-import requests
+import os
 from datetime import datetime
 from typing import Generator, Optional, Callable
+
+from openai import OpenAI
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 
-OLLAMA_HOST = "http://localhost:11434"
-DEFAULT_MODEL = "mistral:7b-instruct-q4_K_M"
-CONTEXT_WINDOW = 8192
-TEMPERATURE = 0.7
+# Default values; will be overridden from config.yaml if present
+DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
+DEFAULT_TEMPERATURE = 1.0
+DEFAULT_TOP_P = 0.95
+DEFAULT_MAX_TOKENS = 8192
+DEFAULT_ENABLE_THINKING = False
+DEFAULT_REASONING_BUDGET = 16384
+# Context window for trimming history (approximate)
+CONTEXT_WINDOW = 16384
 
 logger = logging.getLogger("jarvis.brain")
 
@@ -109,81 +116,89 @@ class Brain:
 
     def __init__(
         self,
-        model: str = DEFAULT_MODEL,
-        ollama_host: str = OLLAMA_HOST,
-        temperature: float = TEMPERATURE,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        enable_thinking: Optional[bool] = None,
+        reasoning_budget: Optional[int] = None,
         on_token: Optional[Callable[[str], None]] = None,
     ):
-        self.model = model
-        self.ollama_host = ollama_host
-        self.temperature = temperature
+        from core.config_manager import config as cfg
+
+        # Load config values with fallbacks
+        self.model = model or cfg.get("nvidia.model") or DEFAULT_MODEL
+        self.temperature = temperature if temperature is not None else cfg.get("nvidia.temperature", DEFAULT_TEMPERATURE)
+        self.top_p = top_p if top_p is not None else cfg.get("nvidia.top_p", DEFAULT_TOP_P)
+        self.max_tokens = max_tokens if max_tokens is not None else cfg.get("nvidia.max_tokens", DEFAULT_MAX_TOKENS)
+        self.enable_thinking = (
+            enable_thinking if enable_thinking is not None else cfg.get("nvidia.enable_thinking", DEFAULT_ENABLE_THINKING)
+        )
+        self.reasoning_budget = (
+            reasoning_budget
+            if reasoning_budget is not None
+            else cfg.get("nvidia.reasoning_budget", DEFAULT_REASONING_BUDGET)
+        )
         self.on_token = on_token  # callback called with each streamed token
         self.history = ConversationHistory()
-        self._check_ollama()
 
-    # ----- Ollama health check -----
-
-    def _check_ollama(self):
-        try:
-            r = requests.get(f"{self.ollama_host}/api/tags", timeout=3)
-            r.raise_for_status()
-            models = [m["name"] for m in r.json().get("models", [])]
-            if self.model not in models:
-                logger.warning(
-                    f"Model '{self.model}' not found in Ollama. "
-                    f"Available: {models}. Run: ollama pull {self.model}"
-                )
-            else:
-                logger.info(f"Brain online. Model: {self.model}")
-        except requests.exceptions.ConnectionError:
-            logger.error(
-                "Cannot reach Ollama at %s — is it running?", self.ollama_host
+        # Build OpenAI-compatible client
+        api_key = cfg.get("nvidia.api_key") or os.getenv("NVIDIA_API_KEY")
+        base_url = cfg.get("nvidia.base_url") or os.getenv("NVIDIA_BASE_URL") or "https://integrate.api.nvidia.com/v1"
+        if not api_key:
+            logger.warning(
+                "NVIDIA API key not found. Set `nvidia.api_key` in config.yaml or export NVIDIA_API_KEY environment variable."
             )
-        except Exception as e:
-            logger.error("Ollama health check failed: %s", e)
+        self.client = OpenAI(base_url=base_url, api_key=api_key) if api_key else None
+
+        logger.info(
+            f"Brain online. Model: {self.model}, temperature: {self.temperature}, top_p: {self.top_p}, "
+            f"max_tokens: {self.max_tokens}, enable_thinking: {self.enable_thinking}, reasoning_budget: {self.reasoning_budget}"
+        )
 
     # ----- Core: stream a response -----
 
     def _stream(self, messages: list[dict]) -> Generator[str, None, None]:
         """
-        Sends messages to Ollama and yields tokens as they arrive.
+        Sends messages to the OpenAI-compatible endpoint and yields tokens as they arrive.
         """
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "stream": True,
-            "options": {
-                "temperature": self.temperature,
-                "num_ctx": CONTEXT_WINDOW,
-            },
-        }
+        if self.client is None:
+            yield "[ERROR] NVIDIA client not initialized (missing API key)."
+            return
 
         try:
-            with requests.post(
-                f"{self.ollama_host}/api/chat",
-                json=payload,
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
                 stream=True,
+                temperature=self.temperature,
+                top_p=self.top_p,
+                max_tokens=self.max_tokens,
+                extra_body={
+                    "chat_template_kwargs": {"enable_thinking": self.enable_thinking},
+                    "reasoning_budget": self.reasoning_budget,
+                },
                 timeout=120,
-            ) as resp:
-                resp.raise_for_status()
-                for line in resp.iter_lines():
-                    if not line:
-                        continue
-                    try:
-                        chunk = json.loads(line)
-                        token = chunk.get("message", {}).get("content", "")
-                        if token:
-                            yield token
-                        if chunk.get("done"):
-                            break
-                    except json.JSONDecodeError:
-                        continue
-        except requests.exceptions.Timeout:
-            logger.error("Ollama request timed out.")
-            yield "\n[JARVIS: response timed out]"
+            )
         except Exception as e:
-            logger.error("Stream error: %s", e)
-            yield f"\n[JARVIS: error — {e}]"
+            logger.error(f"Failed to start NVIDIA chat stream: {e}")
+            yield f"[ERROR] Unable to contact NVIDIA endpoint: {e}"
+            return
+
+        for chunk in response:
+            try:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if getattr(delta, "content", None):
+                    token = delta.content
+                    if token:
+                        yield token
+                        if self.on_token:
+                            self.on_token(token)
+            except Exception as e:
+                logger.debug(f"Error parsing chunk: {e}")
+                continue
 
     # ----- Public: think (single prompt, no history) -----
 
@@ -200,8 +215,6 @@ class Brain:
         response = ""
         for token in self._stream(messages):
             response += token
-            if self.on_token:
-                self.on_token(token)
         return response.strip()
 
     # ----- Public: chat (conversational, with history + tool-calling loop) -----
@@ -271,9 +284,13 @@ class Brain:
             # Find balanced closing brace
             depth, end = 0, -1
             for i, c in enumerate(json_str):
-                if c == '{': depth += 1
-                elif c == '}': depth -= 1
-                if depth == 0: end = i + 1; break
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
             if end == -1:
                 return None
             call = json.loads(json_str[:end])
@@ -309,8 +326,11 @@ class Brain:
     def status(self) -> dict:
         return {
             "model": self.model,
-            "ollama_host": self.ollama_host,
             "temperature": self.temperature,
+            "top_p": self.top_p,
+            "max_tokens": self.max_tokens,
+            "enable_thinking": self.enable_thinking,
+            "reasoning_budget": self.reasoning_budget,
             "history_length": len(self.history.messages),
             "tools_registered": list(_registered_tools.keys()),
         }

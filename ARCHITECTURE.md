@@ -4,7 +4,7 @@
 **Status:** ✅ Complete — all modules built
 **Last updated:** 2026-04-16
 **Language:** Python
-**LLM:** Ollama + Mistral 7B (mistral:7b-instruct-q4_K_M)
+**LLM:** Ollama + Mistral 7B (gemma4:latest)
 **Machine:** 24GB DDR5 RAM, RTX 3050 Laptop 6GB VRAM
 
 ---
@@ -70,7 +70,7 @@ JARVIS/
 │   └── sandbox.py            # Test changes before applying
 │
 ├── ui/
-│   ├── server.py             # FastAPI backend (localhost:8080)
+│   ├── server.py             # FastAPI backend (localhost:8090)
 │   ├── static/
 │   │   ├── index.html        # Dashboard
 │   │   ├── app.js
