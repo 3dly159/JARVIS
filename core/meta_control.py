@@ -6,7 +6,8 @@ Detects state drift and corrects behavioral biases.
 
 import logging
 from typing import Dict, List, Optional
-from core.cognition import CognitiveState, CognitivePolicy
+from core.state_compressor import CognitiveState
+from core.cognition import CognitivePolicy
 
 logger = logging.getLogger("jarvis.meta")
 

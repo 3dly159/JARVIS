@@ -7,7 +7,7 @@ Allows the kernel to 'pre-think' consequences of proactivity.
 import logging
 import time
 from typing import Dict, List, Optional
-from core.cognition import CognitiveState
+from core.state_compressor import CognitiveState
 
 logger = logging.getLogger("jarvis.world")
 

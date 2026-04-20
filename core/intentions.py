@@ -6,6 +6,7 @@ Tracks user 'unspoken' intent based on app context, task data, and session histo
 import logging
 from typing import List, Dict, Optional
 from dataclasses import dataclass
+from core.state_compressor import CognitiveState
 
 logger = logging.getLogger("jarvis.intentions")
 

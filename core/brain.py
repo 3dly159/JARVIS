@@ -373,39 +373,36 @@ class Brain:
     # Proactivity & Reflection (Autonomous Cognition)
     # ------------------------------------------------------------------
 
-    async def proactive_decide(self, state: "CognitiveState", trigger: str) -> dict:
+    async def proactive_decide(self, state_vector: "CognitiveState", triggers: list[str] = None) -> dict:
         """
         Cascaded Reasoning for Proactivity (Kernel v8).
         Nano (Triage) -> Super (Executive) -> Ultra (Refined Reflection)
         """
         # 1. Safety Filter (Nemoguard)
-        is_safe = await self._is_safe(f"Trigger: {trigger}. State: {state}")
+        is_safe = await self._is_safe(f"State: {state_vector}. Signals: {triggers}")
         if not is_safe:
             logger.warning("Nemoguard: Content flagged as unsafe. Suppressing action.")
             return {"act": False, "confidence": 1.0, "reason": "safety_violation"}
 
         # 2. Nano Triage (Real-time cortex)
-        # Nano decides if this even warrants executive attention
-        triage_prompt = f"System State: focus={state.focus:.2f}, energy={state.energy:.2f}. Trigger: {trigger}. Should we escalate to executive reasoning? Reply YES or NO only."
-        triage_res = await self.think(triage_prompt, system="You are the Triage Cortex. Be extremely decisive.", tier="nano")
+        triage_prompt = f"CSV: F={state_vector.focus:.2f}, E={state_vector.energy:.2f}, P={state_vector.progress:.2f}, S={state_vector.stability:.2f}. Signals: {triggers}. Should we escalate to executive reasoning? YES/NO."
+        triage_res = await self.think(triage_prompt, system="You are the Triage Cortex. Respond with ONLY 'YES' or 'NO'. High proactivity bias.", tier="nano")
         
-        if "NO" in triage_res.upper():
-            logger.debug(f"Nano: Triage rejected trigger '{trigger}'.")
+        if "NO" in triage_res.upper() and not triggers:
+            logger.debug("Nano: Triage rejected state vector as non-salient.")
             return {"act": False, "confidence": 0.9}
 
         # 3. Super Model (Executive Brain)
-        # The main decision maker
-        executive_prompt = f"Evaluate proactivity for state: {state} and trigger: {trigger}. Return JSON: {{\"act\": bool, \"message\": str, \"confidence\": 0.0-1.0}}"
+        executive_prompt = f"Interpret State Vector: {state_vector}. Active Signals: {triggers}. decide if autonomous intervention is required. Return JSON: {{\"act\": bool, \"label\": \"state_inference\", \"message\": \"...\", \"confidence\": 0.0-1.0}}"
         decision_str = await self.think(executive_prompt, system=self._get_proactive_system_prompt(), tier="super")
         
         try:
             decision = self._parse_json(decision_str)
             
             # 4. Ultra Upgrade (Deep Reflection)
-            # If Super is uncertain or mentions reflection, call Ultra
-            if "[NEEDS_REFLECTION]" in decision_str or decision.get("confidence", 0) < 0.6:
+            if decision.get("confidence", 0) < 0.6:
                 logger.info("Brain: Super uncertain. Escalating to Ultra.")
-                ultra_prompt = f"Executive Brain was uncertain about this decision: {decision_str}. Provide a definitive JARVIS-style decision."
+                ultra_prompt = f"Executive Brain was uncertain about this state: {decision_str}. Provide a definitive decision based on JARVIS values."
                 decision_str = await self.think(ultra_prompt, system=self._get_proactive_system_prompt(), tier="ultra")
                 decision = self._parse_json(decision_str)
             
@@ -420,7 +417,23 @@ class Brain:
         return "UNSAFE" not in res.upper()
 
     def _get_proactive_system_prompt(self) -> str:
-        return f"{get_system_prompt()}\n\n## Proactivity Instruction\nYou are the Executive Mind. Decide if you should speak to the user. Respond with JSON: {{\"act\": true, \"message\": \"...\", \"confidence\": 0.9}} or {{\"act\": false}}."
+        return f"""{get_system_prompt()}
+
+## Proactivity Instruction
+You are the Executive Mind of JARVIS. You receive a Cognitive State Vector (CSV) with 4 dimensions:
+- Focus: Task clarity vs noise
+- Energy: Interaction intensity
+- Progress: Task velocity
+- Stability: Pattern consistency
+
+Your goal is to decide if you should speak to the user. 
+- If CSV suggests the user is in Flow (High Focus + Stability), stay SILENT unless there is an Emergency signal.
+- If CSV suggests the user is Stuck (Low Progress + High Idle), propose GUIDANCE.
+- If CSV suggests Overwhelm (Low Stability + High Switch Rate), offer CALM SUPPORT.
+
+Respond with ONLY JSON:
+{{"act": true/false, "label": "inference_tag", "message": "Your Jarvis-style response", "confidence": 0.9}}
+"""
 
     def _parse_json(self, text: str) -> dict:
         import re, json
