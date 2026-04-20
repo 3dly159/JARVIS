@@ -124,8 +124,9 @@ class CognitiveKernel:
         if signal_name not in self._active_signals:
             self._active_signals.append(signal_name)
         
-        # Immediate triage if signal is high priority
+        # Continuity Integration (v8 Finalization)
         if signal_name in ["security_alert", "system_overheat"]:
+            state_compressor.continuity.trigger_disturbance(0.9, signal_name)
             self._process_immediate(signal_name)
 
     def _process_immediate(self, signal: str):
@@ -136,33 +137,36 @@ class CognitiveKernel:
     def _loop(self):
         """Unified Executive Loop (Pure v8 - State-Driven)"""
         while self._running:
-            try:
-                # 1. PERCEIVE & COMPRESS (Sensory -> CSV)
-                state = state_compressor.compress()
-                self.intentions.update(state)
-                self.world.update(state)
-                
-                # 2. INTERPRET (Policy Resolution)
-                self.active_policy = self.resolver.resolve(state)
-                
-                # 3. META-CONTROL
-                self.meta.evaluate_efficiency(state, self.active_policy)
-                self.active_policy.interrupt_budget = min(1.0, self.active_policy.interrupt_budget + 0.1)
-
-                # 4. SALIENCY CHECK (Autonomous Decision)
-                # We forward to the Brain if Saliency is high OR we have active signals
-                if state.saliency > self.saliency_threshold or self._active_signals:
-                    logger.debug(f"High Saliency detected ({state.saliency:.2f}). Forwarding to Executive Brain.")
-                    self._process_immediate("state_drift")
-
-                # 5. HEARTBEAT
-                logger.info(f"Cognitive Heartbeat: CSV=[F:{state.focus:.1f} E:{state.energy:.1f} P:{state.progress:.1f} S:{state.stability:.1f}] "
-                            f"Intent={self.intentions.get_summary()}")
-
-            except Exception as e:
-                logger.error(f"Kernel loop error: {e}")
-            
+            self.tick()
             time.sleep(10)
+
+    def tick(self, raw_input: Optional[Dict[str, Any]] = None):
+        """A single cognitive tick. Used by loop and harness."""
+        try:
+            # 1. PERCEIVE & COMPRESS (Sensory -> CSV)
+            state = state_compressor.compress(raw_input)
+            self.intentions.update(state)
+            self.world.update(state)
+            
+            # 2. INTERPRET (Policy Resolution)
+            self.active_policy = self.resolver.resolve(state)
+            
+            # 3. META-CONTROL
+            self.meta.evaluate_efficiency(state, self.active_policy)
+            self.active_policy.interrupt_budget = min(1.0, self.active_policy.interrupt_budget + 0.1)
+
+            # 4. SALIENCY CHECK (Autonomous Decision)
+            # We forward to the Brain if Saliency is high OR we have active signals
+            if state.saliency > self.saliency_threshold or self._active_signals:
+                logger.debug(f"High Saliency detected ({state.saliency:.2f}). Forwarding to Executive Brain.")
+                self._process_immediate("state_drift")
+
+            # 5. HEARTBEAT
+            logger.info(f"Cognitive Heartbeat: CSV=[F:{state.focus:.1f} E:{state.energy:.1f} P:{state.progress:.1f} S:{state.stability:.1f}] "
+                        f"Intent={self.intentions.get_summary()}")
+
+        except Exception as e:
+            logger.error(f"Kernel tick error: {e}")
 
     async def _cognition_step(self, signals: list[str]) -> bool:
         """Unified Thinking Cycle (Perceive -> Interpret -> Decide -> Act)"""

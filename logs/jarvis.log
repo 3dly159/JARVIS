@@ -22671,3 +22671,79 @@ JARVIS online.
 06:55:44 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.3 S:1.0] Intent=deep_work (0.9)
 06:55:55 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
 06:55:55 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.3 S:1.0] Intent=deep_work (0.9)
+06:56:05 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:56:05 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.3 S:1.0] Intent=deep_work (0.9)
+06:56:16 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:56:16 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.3 S:1.0] Intent=deep_work (0.9)
+06:56:26 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:56:26 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:56:26 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9)
+06:56:37 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:56:37 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:56:37 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9)
+06:56:48 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:56:48 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:56:48 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9)
+06:56:58 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:56:58 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9)
+06:57:09 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:57:09 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:57:09 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9)
+06:57:19 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:57:19 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:57:19 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9)
+06:57:30 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:57:30 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:57:30 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:57:41 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:57:41 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:57:41 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:57:51 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:57:51 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:57:51 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:58:02 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:58:02 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:58:02 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:58:13 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:58:13 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:58:13 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:58:23 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:58:23 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:58:23 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:58:34 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:58:34 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:58:34 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:58:44 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:58:44 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:58:44 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:58:55 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:58:55 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:58:55 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:59:06 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:59:06 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:59:06 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:59:16 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:59:16 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:59:16 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:59:27 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:59:27 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:59:37 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:59:37 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:59:37 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:59:48 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:59:48 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:59:48 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+06:59:59 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:59:59 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:59:59 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+07:00:09 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+07:00:09 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+07:00:09 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+07:00:20 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+07:00:20 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+07:00:20 [INFO] jarvis.cognition: Cognitive Heartbeat: CSV=[F:1.0 E:0.5 P:0.0 S:1.0] Intent=deep_work (0.9), passive_discovery (0.5)
+07:00:21 [INFO] jarvis.ui.chat: Chat WebSocket disconnected.
+07:00:22 [INFO] jarvis.task_tracker: Self-ping thread stopped.
+07:00:22 [INFO] jarvis.agent_manager: All running agents killed.
+07:00:22 [INFO] jarvis.agent_manager: Agent manager stopped.
+07:00:22 [INFO] jarvis.main: JARVIS offline.
