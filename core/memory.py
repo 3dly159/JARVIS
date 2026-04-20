@@ -194,6 +194,7 @@ class MemoryPalace:
                 items.append({
                     "id": item["id"],
                     "title": item["title"],
+                    "content": item.get("content", ""),
                     "tags": item.get("tags", []),
                     "created": item.get("created", ""),
                     "updated": item.get("updated", ""),

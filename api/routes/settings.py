@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("")
 async def get_settings():
     """Return all current settings."""
     from core.config_manager import config
@@ -20,7 +20,7 @@ async def get_section(section: str):
     return config.section(section)
 
 
-@router.post("/")
+@router.post("")
 async def update_settings(body: dict):
     """
     Update one or more settings.

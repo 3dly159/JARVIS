@@ -39,12 +39,12 @@ logger = logging.getLogger("jarvis.main")
 # Boot
 # ---------------------------------------------------------------------------
 
-def boot():
+async def boot():
     from core.jarvis import jarvis
 
     # 1. Initialize core modules
     jarvis.initialize()
-
+    
     # 2. Initialize senses (non-fatal if unavailable)
     logger.info("Initializing senses...")
     jarvis.init_senses()
@@ -57,7 +57,7 @@ def boot():
     logger.info("Initializing UI...")
     jarvis.init_ui()
 
-    # 5. JARVIS announces itself
+    # 5. JARVIS announces itself (using async say if updated, but say is simple)
     jarvis.say("JARVIS online. Good to be back, sir.")
     logger.info("JARVIS boot complete.")
 
@@ -68,7 +68,7 @@ def boot():
 # CLI mode (no UI)
 # ---------------------------------------------------------------------------
 
-def run_cli(jarvis):
+async def run_cli(jarvis):
     """Simple terminal chat loop for testing without the full UI."""
     print("\n" + "=" * 50)
     print("  J.A.R.V.I.S. — Terminal Mode")
@@ -77,9 +77,14 @@ def run_cli(jarvis):
 
     while True:
         try:
-            user_input = input("You: ").strip()
+            import aioconsole
+            user_input = await aioconsole.ainput("You: ")
+            user_input = user_input.strip()
         except (KeyboardInterrupt, EOFError):
             break
+        except ImportError:
+            # Fallback if aioconsole not installed
+            user_input = input("You: ").strip()
 
         if not user_input:
             continue
@@ -103,8 +108,11 @@ def run_cli(jarvis):
 
         # Stream response
         print("JARVIS: ", end="", flush=True)
-        for token in jarvis.chat_stream(user_input):
-            print(token, end="", flush=True)
+        async for segment in jarvis.chat_stream(user_input):
+            if segment["type"] == "text":
+                print(segment["content"], end="", flush=True)
+            elif segment["type"] == "tool_call":
+                print(f"\n[ACTION: {segment['tool']}]", end="", flush=True)
         print("\n")
 
 
@@ -112,8 +120,8 @@ def run_cli(jarvis):
 # Main
 # ---------------------------------------------------------------------------
 
-def main():
-    jarvis = boot()
+async def main():
+    jarvis = await boot()
 
     # Determine run mode
     import sys
@@ -121,7 +129,7 @@ def main():
 
     if "--cli" in args or not jarvis.ui:
         # Terminal mode
-        run_cli(jarvis)
+        await run_cli(jarvis)
     else:
         # UI mode — start the web server
         import webbrowser
@@ -133,11 +141,13 @@ def main():
         logger.info(f"Starting UI at {url}")
 
         if ui_cfg.get("open_browser_on_start", True):
-            time.sleep(1)
+            # Non-blocking sleep in async
+            await asyncio.sleep(1)
             webbrowser.open(url)
 
         try:
-            jarvis.ui.run()
+            # Shared event loop for Core and UI
+            await jarvis.ui.serve()
         except KeyboardInterrupt:
             logger.info("Shutting down...")
             jarvis.say("Shutting down. Goodbye, sir.")
@@ -152,4 +162,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass

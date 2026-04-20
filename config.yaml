@@ -1,5 +1,9 @@
-# J.A.R.V.I.S. Configuration
-# Edit this file to customize your assistant.
+# ---------------------------------------------------------------------------
+# Operator
+# ---------------------------------------------------------------------------
+operator:
+  name: "T. Stark"
+  clearance: "alpha"
 
 # ---------------------------------------------------------------------------
 # LLM
@@ -8,7 +12,7 @@ llm:
   model: "gemma4:latest"
   ollama_host: "http://localhost:11434"
   temperature: 0.7
-  context_window: 16384
+  context_window: 163840
 
 # ---------------------------------------------------------------------------
 # Voice
@@ -20,7 +24,7 @@ voice:
   tts_pitch: "+0Hz"
   stt_model: "base.en"            # faster-whisper model size: tiny/base/small/medium
   stt_device: "cuda"              # cuda or cpu
-  wake_word: "hey jarvis"
+  wake_word: "hey jarvis"          # Trigger word(s). Can be a list: ["hey jarvis", "marvin", "alexa"] or comma-separated string
   hotkey: "ctrl+space"
 
 # ---------------------------------------------------------------------------
@@ -51,7 +55,7 @@ memory:
 # ---------------------------------------------------------------------------
 monitor:
   enabled: true
-  check_interval_seconds: 30
+  check_interval_seconds: 2
   cpu_alert_threshold: 90         # % CPU usage before alert
   ram_alert_threshold: 85         # % RAM usage before alert
   vram_alert_threshold: 90        # % VRAM usage before alert
@@ -62,6 +66,16 @@ monitor:
 tasks:
   self_ping_interval_seconds: 60  # How often JARVIS checks its own tasks
   stall_threshold_minutes: 10     # Mark task stalled after N minutes of no progress
+
+# ---------------------------------------------------------------------------
+# Proactivity & Cognition
+# ---------------------------------------------------------------------------
+proactivity:
+  enabled: true
+  check_interval_seconds: 10      # How often to check for time-based triggers
+  cooldown_seconds: 60            # Minimum time between proactive vocalizations
+  confidence_threshold: 0.7       # Minimum brain confidence to act (0.0 to 1.0)
+  presence_gating: true           # Use camera to verify presence before speaking
 
 # ---------------------------------------------------------------------------
 # Actions
@@ -87,6 +101,7 @@ self_mod:
 notifications:
   tray_enabled: true
   voice_alerts: true
+  quiet_hours_enabled: false
   quiet_hours_start: "23:00"
   quiet_hours_end: "08:00"
 
@@ -99,14 +114,27 @@ logging:
   log_conversations: true
 
 # ---------------------------------------------------------------------------
-# NVIDIA LLM (optional override for brain)
+# Intelligence Engine (NVIDIA NIM Cascaded Stack)
 # ---------------------------------------------------------------------------
 nvidia:
-  model: "nvidia/nemotron-3-super-120b-a12b"
+  tiers:
+    nano:    "nvidia/nemotron-nano-8b-v1"
+    super:   "nvidia/nemotron-super-49b-v1.5"
+    ultra:   "nvidia/nemotron-ultra-253b-v1"
+    embed:   "nvidia/llama-nemotron-embed-1b-v2"
+    vision:  "nvidia/nano-vl-8b-v1"
+    safety:  "llama-3.1-nemoguard-8b-content-safety"
+  
   base_url: "https://integrate.api.nvidia.com/v1"
-  api_key: "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"   # set via environment variable or replace with actual key
-  temperature: 1.0
+  api_keys:
+    - "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"
+    - "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"
+    - "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"
+    - "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"
+    - "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"
+  
+  temperature: 0.7
   top_p: 0.95
-  max_tokens: 131072
-  enable_thinking: false
+  max_tokens: 16384
+  enable_thinking: true
   reasoning_budget: 16384

@@ -28,7 +28,7 @@ async def spawn_agent(body: dict):
     from core.agent_manager import AgentType, llm_work
     if not jarvis.agents:
         return JSONResponse({"error": "Agent manager not initialized"}, status_code=500)
-    agent = jarvis.agents.spawn(
+    agent = await jarvis.agents.spawn(
         name=body.get("name", "agent"),
         task=body.get("task", ""),
         agent_type=AgentType(body.get("type", "general")),

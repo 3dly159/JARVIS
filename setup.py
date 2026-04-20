@@ -249,7 +249,7 @@ def configure(model: str, stt_device: str) -> dict:
             "model": model,
             "ollama_host": "http://localhost:11434",
             "temperature": 0.7,
-            "context_window": 16384,
+            "context_window": 163840,
         },
         "voice": {
             "tts_engine": "edge-tts",

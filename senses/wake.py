@@ -17,7 +17,7 @@ import threading
 import time
 import queue
 import numpy as np
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger("jarvis.wake")
 
@@ -38,12 +38,32 @@ class WakeListener:
 
     def __init__(
         self,
-        wake_word: str = "hey jarvis",
+        wake_word: Any = "hey jarvis",
         hotkey: str = "ctrl+space",
         on_wake: Optional[Callable[[str], None]] = None,
         threshold: float = DETECTION_THRESHOLD,
     ):
-        self.wake_word = wake_word
+        # Support list or comma-separated string
+        if isinstance(wake_word, str):
+            words = [w.strip() for w in wake_word.split(",")]
+        elif isinstance(wake_word, list):
+            words = wake_word
+        else:
+            words = ["hey jarvis"]
+
+        # Map to specific OWW model names (e.g., hey_jarvis -> hey_jarvis_v0.1)
+        self.wake_words = []
+        for w in words:
+            normalized = w.lower().replace(" ", "_")
+            if normalized == "hey_jarvis":
+                self.wake_words.append("hey_jarvis_v0.1")
+            elif normalized == "hey_mycroft":
+                self.wake_words.append("hey_mycroft_v0.1")
+            elif normalized == "alexa":
+                self.wake_words.append("alexa_v0.1")
+            else:
+                self.wake_words.append(normalized)
+
         self.hotkey = hotkey
         self.on_wake = on_wake
         self.threshold = threshold
@@ -54,7 +74,7 @@ class WakeListener:
         self._last_triggered: float = 0.0
         self._oww_model = None
 
-        logger.info(f"Wake listener ready. Wake word: '{wake_word}' | Hotkey: {hotkey}")
+        logger.info(f"Wake listener ready. Wake words: {self.wake_words} | Hotkey: {hotkey}")
 
     # ------------------------------------------------------------------
     # Start / Stop
@@ -62,16 +82,18 @@ class WakeListener:
 
     def start(self, on_wake: Optional[Callable] = None):
         """Start both wake word and hotkey listeners."""
-        if on_wake:
-            self.on_wake = on_wake
         if self._running:
-            logger.warning("Wake listener already running.")
+            logger.debug("Wake listener already running.")
             return
 
+        if on_wake:
+            self.on_wake = on_wake
+
+        logger.info("Starting auditory sensors...")
         self._running = True
         self._start_oww()
         self._start_hotkey()
-        logger.info("Wake listener started.")
+        logger.info("Wake listener fully active.")
 
     def stop(self):
         """Stop all listeners."""
@@ -87,24 +109,36 @@ class WakeListener:
         """Load the OpenWakeWord model. Returns True on success."""
         try:
             from openwakeword.model import Model
+            from openwakeword import get_pretrained_model_paths
+            
+            # Resolve absolute paths for the requested models
+            all_paths = get_pretrained_model_paths()
+            resolved_paths = []
+            
+            for w in self.wake_words:
+                # Try finding a direct match or suffix match (e.g., hey_jarvis_v0.1.onnx)
+                match = next((p for p in all_paths if w in p), None)
+                if match:
+                    resolved_paths.append(match)
+                else:
+                    logger.warning(f"Model '{w}' not found in resources. Skipping.")
 
-            # OWW has a built-in "hey_jarvis" model — use it directly
-            # If not available, it falls back to the nearest match
-            self._oww_model = Model(
-                wakeword_models=["hey_jarvis"],
-                inference_framework="onnx",
-            )
-            logger.info("OpenWakeWord model loaded (hey_jarvis).")
+            if not resolved_paths:
+                logger.error("No valid wake word models found.")
+                return False
+
+            logger.info(f"Loading OpenWakeWord models: {resolved_paths}...")
+            self._oww_model = Model(wakeword_model_paths=resolved_paths)
+            logger.info("OpenWakeWord models loaded successfully.")
             return True
         except ImportError:
             logger.error("openwakeword not installed. Run: pip install openwakeword")
             return False
         except Exception as e:
-            # Model might not include hey_jarvis — try default
             logger.warning(f"hey_jarvis model unavailable ({e}), trying default OWW models.")
             try:
                 from openwakeword.model import Model
-                self._oww_model = Model(inference_framework="onnx")
+                self._oww_model = Model()
                 logger.info("OpenWakeWord loaded with default models.")
                 return True
             except Exception as e2:
@@ -112,52 +146,40 @@ class WakeListener:
                 return False
 
     def _start_oww(self):
-        """Start OpenWakeWord listener in background thread."""
+        """Subscribe to the master mic bridge."""
         if not self._load_oww_model():
             logger.warning("Wake word detection unavailable — hotkey only.")
             return
 
-        self._oww_thread = threading.Thread(
-            target=self._oww_loop,
-            daemon=True,
-            name="wake-oww",
-        )
-        self._oww_thread.start()
+        from senses.mic_bridge import mic_bridge
+        mic_bridge.subscribe(self._on_audio_chunk)
+        logger.info("Wake word listener subscribed to master mic stream.")
 
-    def _oww_loop(self):
-        """Continuously feed mic audio to OpenWakeWord."""
-        try:
-            import sounddevice as sd
-        except ImportError:
-            logger.error("sounddevice not installed.")
+    def _on_audio_chunk(self, audio: np.ndarray):
+        """Called by MicBridge with 80ms chunks of 16kHz audio."""
+        if not self._running or not self.enabled:
             return
 
-        logger.info("Wake word listener active. Say 'Hey JARVIS'...")
+        try:
+            # Feed to OWW
+            prediction = self._oww_model.predict(audio)
 
-        with sd.InputStream(
-            samplerate=SAMPLE_RATE,
-            channels=1,
-            dtype="int16",
-            blocksize=CHUNK_SAMPLES,
-        ) as stream:
-            while self._running:
-                try:
-                    chunk, _ = stream.read(CHUNK_SAMPLES)
-                    audio = chunk.flatten()
+            # Inhibit processing if JARVIS is currently speaking
+            # This implements the "Patience Protocol" (No Interruption)
+            from core.jarvis import jarvis
+            if jarvis.voice and jarvis.voice.is_speaking:
+                return
 
-                    # Feed to OWW
-                    prediction = self._oww_model.predict(audio)
+            # Standard Wake Word Threshold logic
+            current_threshold = self.threshold
+            
+            for model_name, score in prediction.items():
+                if score >= current_threshold:
+                    self._trigger("wake_word")
+                    break
 
-                    # Check all models for threshold crossing
-                    for model_name, score in prediction.items():
-                        if score >= self.threshold:
-                            self._trigger("wake_word")
-                            break
-
-                except Exception as e:
-                    if self._running:
-                        logger.error(f"OWW loop error: {e}")
-                    time.sleep(0.1)
+        except Exception as e:
+            logger.debug(f"OWW processing error: {e}")
 
     # ------------------------------------------------------------------
     # Hotkey
@@ -165,6 +187,11 @@ class WakeListener:
 
     def _start_hotkey(self):
         """Register global hotkey."""
+        import os, sys
+        if sys.platform == "linux" and os.geteuid() != 0:
+            logger.warning("Hotkey disabled: 'keyboard' library requires root (sudo) on Linux.")
+            return
+
         try:
             import keyboard
             keyboard.add_hotkey(self.hotkey, lambda: self._trigger("hotkey"))
@@ -197,6 +224,17 @@ class WakeListener:
         self._last_triggered = now
 
         logger.info(f"Wake triggered via {source}.")
+        
+        # Interruption logic: If JARVIS is speaking, stop him.
+        try:
+            from core.jarvis import jarvis
+            if jarvis.voice and jarvis.voice.is_speaking:
+                logger.info("Interruption detected! Silencing system.")
+                jarvis.interrupt()
+                # We still trigger on_wake so that it starts a NEW listen cycle
+        except Exception as e:
+            logger.debug(f"Interruption check failed: {e}")
+
         if self.on_wake:
             threading.Thread(
                 target=self.on_wake,
@@ -221,7 +259,7 @@ class WakeListener:
 
     def status(self) -> dict:
         return {
-            "wake_word": self.wake_word,
+            "wake_words": self.wake_words,
             "hotkey": self.hotkey,
             "enabled": self.enabled,
             "running": self._running,

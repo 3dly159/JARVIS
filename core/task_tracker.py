@@ -207,6 +207,7 @@ class TaskTracker:
         self.on_complete = on_complete
         self._ping_thread: Optional[threading.Thread] = None
         self._running = False
+        self._recent_completions: list[float] = [] # Timestamps of completions in last 24h
         logger.info("Task tracker online.")
 
     # ----- CRUD -----
@@ -270,9 +271,19 @@ class TaskTracker:
         task.result = result
         task.updated = datetime.now().isoformat()
         self.store.save(task)
+        self._recent_completions.append(time.time())
         logger.info(f"Task completed: {task_id} — {result[:60]}")
         if self.on_complete:
             self.on_complete(task)
+
+    def get_completion_streak(self, window_hours: int = 4) -> int:
+        """Returns number of tasks completed in the given window."""
+        now = time.time()
+        threshold = now - (window_hours * 3600)
+        # Cleanup old ones
+        self._recent_completions = [t for t in self._recent_completions if t > now - 86400]
+        streak = sum(1 for t in self._recent_completions if t > threshold)
+        return streak
 
     def cancel(self, task_id: str):
         self.update_status(task_id, TaskStatus.CANCELLED)

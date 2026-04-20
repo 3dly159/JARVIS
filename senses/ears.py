@@ -11,10 +11,7 @@ Usage:
     ears.stop_continuous()
 """
 
-import logging
-import queue
-import threading
-import time
+import asyncio, logging, queue, threading, time, inspect
 import numpy as np
 from typing import Optional, Callable
 
@@ -51,6 +48,12 @@ class Ears:
         self._continuous_thread: Optional[threading.Thread] = None
         self._callback: Optional[Callable] = None
         self._load_model()
+        
+        # Interruption and Interaction tracking
+        self._last_interaction_time = 0.0
+        self._interruption_thread: Optional[threading.Thread] = None
+        self._interruption_active = False
+        self.start_interruption_monitor()
 
     # ------------------------------------------------------------------
     # Model loading
@@ -107,25 +110,50 @@ class Ears:
         speech_started = False
         start_time = time.time()
 
-        logger.debug("Listening for speech...")
+        from senses.mic_bridge import mic_bridge
+        audio_queue = queue.Queue()
+        LISTEN_GUARD_SECONDS = 0.5  # Ignore first 500ms to avoid echo
 
-        with sd.InputStream(
-            samplerate=SAMPLE_RATE,
-            channels=CHANNELS,
-            dtype="float32",
-            blocksize=chunk_samples,
-        ) as stream:
+        def queue_callback(chunk):
+            chunk_flat = chunk.astype(np.float32) / 32768.0
+            audio_queue.put(chunk_flat)
+
+        mic_bridge.subscribe(queue_callback)
+        
+        # Broadcast state
+        try:
+            from core.jarvis import jarvis
+            jarvis._broadcast_state("listening")
+        except Exception: pass
+        
+        try:
             while True:
                 # Timeout check
-                if time.time() - start_time > timeout:
+                elapsed = time.time() - start_time
+                if elapsed > timeout:
                     logger.debug("Listen timeout reached.")
                     break
 
-                chunk, _ = stream.read(chunk_samples)
-                chunk_flat = chunk.flatten()
+                try:
+                    chunk_flat = audio_queue.get(timeout=1.0)
+                except queue.Empty:
+                    continue
+                
+                # Silence Guard: Discard chunks at the very beginning
+                if elapsed < LISTEN_GUARD_SECONDS:
+                    continue
+                
+                # Dynamic VAD: Raise the floor if JARVIS is talking
+                # This prevents transcribing own echo
+                current_silence_threshold = SILENCE_THRESHOLD
+                expected_rms = mic_bridge.expected_speaker_rms
+                if expected_rms > 0:
+                    # Require signal to be at least 1.5x louder than speaker output
+                    current_silence_threshold = max(current_silence_threshold, expected_rms * 1.5)
+
                 rms = float(np.sqrt(np.mean(chunk_flat ** 2)))
 
-                if rms > SILENCE_THRESHOLD:
+                if rms > current_silence_threshold:
                     # Speech detected
                     if not speech_started:
                         logger.debug("Speech started.")
@@ -145,6 +173,8 @@ class Ears:
                 if len(audio_chunks) >= max_chunks:
                     logger.debug("Max recording length reached.")
                     break
+        finally:
+            mic_bridge.unsubscribe(queue_callback)
 
         if not audio_chunks or not speech_started:
             return None
@@ -156,7 +186,12 @@ class Ears:
     # ------------------------------------------------------------------
 
     def transcribe(self, audio: np.ndarray) -> str:
-        """Transcribe a numpy audio array to text."""
+        """Transcribe audio chunk via faster-whisper."""
+        try:
+            from core.jarvis import jarvis
+            jarvis._broadcast_state("thinking")
+        except Exception: pass
+
         if self._model is None:
             logger.error("Whisper model not loaded.")
             return ""
@@ -169,7 +204,14 @@ class Ears:
                 vad_parameters={"min_silence_duration_ms": 500},
             )
             text = " ".join(s.text.strip() for s in segments).strip()
-            logger.info(f"Transcribed: '{text}'")
+            if text:
+                self._last_interaction_time = time.time()
+                logger.info(f"Transcribed: '{text}'")
+                # Semantic Confusion Detection
+                confusion_keywords = ["what", "repeat", "pardon", "again", "didn't hear", "understand"]
+                if any(kw in text.lower() for kw in confusion_keywords):
+                    from core.cognition import cognition
+                    cognition.trigger("user_confusion", {"text": text})
             return text
         except Exception as e:
             logger.error(f"Transcription error: {e}")
@@ -192,13 +234,45 @@ class Ears:
         audio = self._capture_utterance(timeout=timeout)
         if audio is None:
             text = ""
+            try:
+                from core.jarvis import jarvis
+                jarvis._broadcast_state("idle")
+            except Exception: pass
         else:
             text = self.transcribe(audio)
 
-        if callback and text:
-            callback(text)
+        if callback:
+            self._invoke_callback(callback, text)
 
         return text
+
+    def _invoke_callback(self, callback: Callable, text: str):
+        """Invoke callback, handling both sync and async functions."""
+        if not callback:
+            return
+
+        try:
+            if inspect.iscoroutinefunction(callback):
+                # Schedule on the main event loop
+                try:
+                    from core.jarvis import jarvis
+                    loop = getattr(jarvis, "loop", None)
+                    if not loop:
+                        try:
+                            loop = asyncio.get_running_loop()
+                        except RuntimeError:
+                            # If we still don't have a loop, we can't schedule the coroutine
+                            logger.error("No active event loop found to schedule callback.")
+                            return
+                except Exception:
+                    logger.error("Failed to resolve event loop for callback.")
+                    return
+
+                asyncio.run_coroutine_threadsafe(callback(text), loop)
+            else:
+                callback(text)
+        except Exception as e:
+            logger.error(f"Callback error: {e}")
 
     # ------------------------------------------------------------------
     # Continuous listening
@@ -236,10 +310,79 @@ class Ears:
                 if audio is not None:
                     text = self.transcribe(audio)
                     if text and self._callback:
-                        self._callback(text)
+                        self._invoke_callback(self._callback, text)
             except Exception as e:
                 logger.error(f"Continuous listen error: {e}")
                 time.sleep(1)
+
+    # ------------------------------------------------------------------
+    # Interruption monitoring (Full-Duplex)
+    # ------------------------------------------------------------------
+
+    def start_interruption_monitor(self):
+        """Start background monitor for user interruptions during TTS."""
+        if self._interruption_active:
+            return
+        self._interruption_active = True
+        self._interruption_thread = threading.Thread(
+            target=self._interruption_loop,
+            daemon=True,
+            name="ears-interruption",
+        )
+        self._interruption_thread.start()
+        logger.info("Interruption monitor active.")
+
+    def _interruption_loop(self):
+        """Background loop specifically for detecting voice energy spikes during TTS."""
+        from senses.mic_bridge import mic_bridge
+        from core.jarvis import jarvis
+        
+        audio_queue = queue.Queue()
+        mic_bridge.subscribe(audio_queue.put)
+        
+        try:
+            vocalization_start_time = 0
+            while self._interruption_active:
+                try:
+                    chunk = audio_queue.get(timeout=1.0)
+                    chunk_flat = chunk.astype(np.float32) / 32768.0
+                    
+                    # Only check if JARVIS is actually speaking
+                    if jarvis.voice and jarvis.voice.is_speaking:
+                        if vocalization_start_time == 0:
+                            vocalization_start_time = time.time()
+                        
+                        # Grace period: Ignore the first 800ms of any vocalization
+                        # to avoid initial transients and heavy speaker echo
+                        if time.time() - vocalization_start_time < 0.8:
+                            continue
+
+                        rms = float(np.sqrt(np.mean(chunk_flat ** 2)))
+                        expected = mic_bridge.expected_speaker_rms
+                        
+                        # Dynamic thresholding
+                        # 1. Skip if no baseline (Expected=0 means unknown or silent)
+                        if expected <= 1e-4:
+                            continue
+
+                        # 2. Feedback ratio (user must be much louder than echo)
+                        # 3. Hard noise floor (ignore ambient and feedback noise)
+                        if (rms > expected * 25.0) or (rms > 0.9):
+                            logger.info(f"User interruption confirmed (RMS: {rms:.4f}, Expected: {expected:.4f})")
+                            jarvis.cognition.trigger("voice_interruption", {"rms": rms})
+                            jarvis.interrupt()
+                            
+                            vocalization_start_time = 0
+                            time.sleep(1.2)
+                    else:
+                        vocalization_start_time = 0
+                except queue.Empty:
+                    continue
+                except Exception as e:
+                    logger.error(f"Interruption check error: {e}")
+                    time.sleep(1.0)
+        finally:
+            mic_bridge.unsubscribe(audio_queue.put)
 
     # ------------------------------------------------------------------
     # Status
@@ -253,6 +396,14 @@ class Ears:
             "continuous": self._continuous,
             "language": self.language,
         }
+
+    def get_last_interaction_time(self) -> float:
+        """Returns the last timestamp when the user interacted via voice."""
+        return self._last_interaction_time
+
+    def check_recent_interaction(self, seconds: int) -> bool:
+        """Returns True if the user interacted in the last N seconds."""
+        return (time.time() - self._last_interaction_time) < seconds
 
 
 # ---------------------------------------------------------------------------

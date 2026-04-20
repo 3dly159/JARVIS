@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("")
 async def list_tasks():
     from core.jarvis import jarvis
     if not jarvis.tasks:
@@ -22,7 +22,7 @@ async def active_tasks():
     return [t.to_dict() for t in jarvis.tasks.list_active()]
 
 
-@router.post("/")
+@router.post("")
 async def create_task(body: dict):
     from core.jarvis import jarvis
     if not jarvis.tasks:

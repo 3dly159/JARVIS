@@ -68,6 +68,11 @@ class Eyes:
         encode=False → returns raw JPEG bytes
         """
         try:
+            from core.jarvis import jarvis
+            jarvis._broadcast_state("seeing")
+        except Exception: pass
+
+        try:
             import mss
             import mss.tools
             from PIL import Image

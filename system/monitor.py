@@ -47,39 +47,48 @@ class SystemMonitor:
     # ------------------------------------------------------------------
 
     def get_stats(self) -> dict:
-        """Collect current system stats."""
+        """
+        Return the latest cached stats.
+        If no stats exist yet, perform a quick initial collection.
+        """
+        if not self._last_stats:
+            return self._update_stats()
+        return self._last_stats
+
+    def _update_stats(self) -> dict:
+        """Perform the actual heavy lifting of stats collection."""
         stats = {}
         try:
             import psutil
+            import os
 
-            # CPU
-            stats["cpu_percent"] = psutil.cpu_percent(interval=1)
+            # System-wide metrics
+            stats["cpu_percent"] = psutil.cpu_percent(interval=None) # Non-blocking for the loop
             stats["cpu_count"] = psutil.cpu_count()
+            stats["cpu_cores"] = psutil.cpu_percent(percpu=True)
 
-            # RAM
             ram = psutil.virtual_memory()
             stats["ram_total_gb"] = round(ram.total / 1024**3, 1)
             stats["ram_used_gb"] = round(ram.used / 1024**3, 1)
             stats["ram_percent"] = ram.percent
 
-            # Disk
             disk = psutil.disk_usage("/")
             stats["disk_total_gb"] = round(disk.total / 1024**3, 1)
             stats["disk_used_gb"] = round(disk.used / 1024**3, 1)
             stats["disk_percent"] = disk.percent
 
-            # JARVIS process
-            import os
+            # JARVIS process metrics
             proc = psutil.Process(os.getpid())
-            stats["jarvis_cpu"] = proc.cpu_percent(interval=0.1)
+            # For process CPU, calling it with interval=None returns percentage since last call
+            stats["jarvis_cpu"] = proc.cpu_percent(interval=2)
             stats["jarvis_ram_mb"] = round(proc.memory_info().rss / 1024**2, 1)
 
         except ImportError:
-            logger.warning("psutil not installed — CPU/RAM monitoring unavailable.")
+            logger.warning("psutil not installed — metrics unavailable.")
         except Exception as e:
             logger.error(f"Stats collection error: {e}")
 
-        # VRAM
+        # GPU metrics
         try:
             import pynvml
             pynvml.nvmlInit()
@@ -92,6 +101,19 @@ class SystemMonitor:
             stats["gpu_temp_c"] = temp
         except Exception:
             stats["vram_available"] = False
+
+        # CPU Temperature metrics
+        try:
+            temps = psutil.sensors_temperatures()
+            if temps:
+                # Common Linux keys for CPU temp
+                for name in ["coretemp", "cpu_thermal", "k10temp", "acpitz"]:
+                    if name in temps:
+                        # Take the first sensor in the list (usually 'Package id 0' or 'temp1')
+                        stats["cpu_temp_c"] = temps[name][0].current
+                        break
+        except Exception:
+            pass
 
         self._last_stats = stats
         return stats
@@ -117,35 +139,82 @@ class SystemMonitor:
 
     def _check_thresholds(self, stats: dict):
         now = time.time()
-        alerts = []
-
+        from core.cognition import cognition
+        
+        # 1. Standard Resources
         checks = [
-            ("cpu",  stats.get("cpu_percent", 0),  self.cpu_threshold,  "CPU usage at {val:.0f}%"),
-            ("ram",  stats.get("ram_percent", 0),  self.ram_threshold,  "RAM usage at {val:.0f}%"),
-            ("vram", stats.get("vram_percent", 0), self.vram_threshold, "VRAM usage at {val:.0f}%"),
+            ("cpu",  stats.get("cpu_percent", 0),  self.cpu_threshold,  "CPU usage at {val:.0f}%", "resource_exhaustion"),
+            ("ram",  stats.get("ram_percent", 0),  self.ram_threshold,  "RAM usage at {val:.0f}%", "resource_exhaustion"),
+            ("vram", stats.get("vram_percent", 0), self.vram_threshold, "VRAM usage at {val:.0f}%", "resource_exhaustion"),
         ]
 
-        for key, val, threshold, msg_tpl in checks:
+        for key, val, threshold, msg_tpl, trigger_name in checks:
             if val >= threshold:
                 last = self._alert_cooldown.get(key, 0)
                 if now - last > self.ALERT_COOLDOWN_S:
                     self._alert_cooldown[key] = now
                     msg = msg_tpl.format(val=val)
-                    alerts.append({"metric": key, "value": val, "threshold": threshold, "message": msg})
                     logger.warning(f"System alert: {msg}")
+                    # Notify Cognition Loop
+                    cognition.trigger(trigger_name, {"metric": key, "value": val})
 
-        for alert in alerts:
-            if self.on_alert:
-                self.on_alert(alert)
+        # 2. Temperature (Emergency)
+        if stats.get("gpu_temp_c", 0) > 85 or stats.get("cpu_temp_c", 0) > 90:
+            last = self._alert_cooldown.get("temp", 0)
+            if now - last > 60: # Short cooldown for emergencies
+                self._alert_cooldown["temp"] = now
+                cognition.trigger("system_overheat", {"stats": stats})
+
+        if stats.get("disk_percent", 0) > 95:
+            last = self._alert_cooldown.get("disk", 0)
+            if now - last > 3600:
+                self._alert_cooldown["disk"] = now
+                cognition.trigger("resource_exhaustion", {"msg": "Disk space critically low (<5%)"})
+
+        # 4. Throttling Detection (Actionable)
+        if stats.get("cpu_freq_percent", 100) < 60:
+             last = self._alert_cooldown.get("throttling", 0)
+             if now - last > 900:
+                 self._alert_cooldown["throttling"] = now
+                 cognition.trigger("hardware_throttling", {"val": stats["cpu_freq_percent"]})
+
+        # 5. Network Instability
+        if stats.get("net_latency_ms", 0) > 300:
+             last = self._alert_cooldown.get("network", 0)
+             if now - last > 300:
+                 self._alert_cooldown["network"] = now
+                 cognition.trigger("network_instability", {"latency": stats["net_latency_ms"]})
+
+    def _get_net_latency(self) -> float:
+        """Measure latency to a stable target (1.1.1.1)."""
+        import subprocess
+        try:
+            # -c 1 (1 packet), -W 1 (1s timeout)
+            res = subprocess.check_output(["ping", "-c", "1", "-W", "1", "1.1.1.1"], stderr=subprocess.STDOUT, text=True)
+            # Parse time=XX ms
+            import re
+            m = re.search(r"time=([\d\.]+)", res)
+            return float(m.group(1)) if m else 0.0
+        except Exception:
+            return 999.0 # Fail = high latency
 
     # ------------------------------------------------------------------
     # Background monitor
     # ------------------------------------------------------------------
 
-    def start(self):
+    def start(self, interval: Optional[int] = None):
+        if interval is not None:
+            self.check_interval = interval
+            
         if self._running:
             return
         self._running = True
+        # Seed the CPU measurements for both system and process
+        import psutil
+        import os
+        psutil.cpu_percent(interval=None)
+        psutil.Process(os.getpid()).cpu_percent(interval=None)
+        
         self._thread = threading.Thread(target=self._loop, daemon=True, name="sys-monitor")
         self._thread.start()
         logger.info(f"System monitor started (interval: {self.check_interval}s)")
@@ -157,7 +226,7 @@ class SystemMonitor:
     def _loop(self):
         while self._running:
             try:
-                stats = self.get_stats()
+                stats = self._update_stats()
                 self._check_thresholds(stats)
             except Exception as e:
                 logger.error(f"Monitor loop error: {e}")

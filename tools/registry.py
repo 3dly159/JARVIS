@@ -26,34 +26,40 @@ class ToolRegistry:
     def __init__(self):
         self._tools: dict[str, dict] = {}
 
-    def register(self, name: str, description: str, handler: Callable, params: dict = None):
+    def register(self, name: str, description: str, handler: Callable = None, params: dict = None):
         """
-        Register a tool.
+        Register a tool. Can be used as a standard call or a decorator.
         name: unique tool name
         description: what it does (used in brain prompt)
         handler: callable(**kwargs) → result string
         params: dict of param_name → description
         """
-        self._tools[name] = {
-            "name": name,
-            "description": description,
-            "handler": handler,
-            "params": params or {},
-        }
-        logger.debug(f"Tool registered: {name}")
+        def decorator(func: Callable):
+            self._tools[name] = {
+                "name": name,
+                "description": description,
+                "handler": func,
+                "params": params or {},
+            }
+            logger.debug(f"Tool registered: {name}")
+            return func
 
-    def call(self, name: str, **kwargs) -> str:
+        if handler is None:
+            return decorator
+        return decorator(handler)
+
+    def call(self, tool_name: str, **kwargs) -> str:
         """Call a tool by name with kwargs. Returns result string."""
-        if name not in self._tools:
-            logger.warning(f"Tool not found: {name}")
-            return f"Error: tool '{name}' not found."
+        if tool_name not in self._tools:
+            logger.warning(f"Tool not found: {tool_name}")
+            return f"Error: tool '{tool_name}' not found."
         try:
-            result = self._tools[name]["handler"](**kwargs)
-            logger.info(f"Tool '{name}' called → {str(result)[:80]}")
+            result = self._tools[tool_name]["handler"](**kwargs)
+            logger.info(f"Tool '{tool_name}' called → {str(result)[:80]}")
             return str(result)
         except Exception as e:
-            logger.error(f"Tool '{name}' error: {e}")
-            return f"Error running {name}: {e}"
+            logger.error(f"Tool '{tool_name}' error: {e}")
+            return f"Error running {tool_name}: {e}"
 
     def get_all(self) -> list[dict]:
         """Get all tool schemas (for brain prompt injection)."""

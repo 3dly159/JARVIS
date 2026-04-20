@@ -35,12 +35,14 @@ class Notifier:
         sound_enabled: bool = True,
         quiet_start: str = "23:00",
         quiet_end: str = "08:00",
+        quiet_hours_enabled: bool = False,
     ):
         self.voice_alerts = voice_alerts
         self.tray_enabled = tray_enabled
         self.sound_enabled = sound_enabled
         self.quiet_start = quiet_start
         self.quiet_end = quiet_end
+        self.quiet_hours_enabled = quiet_hours_enabled
         self._history: list[dict] = []
         logger.info("Notifier online.")
 
@@ -87,7 +89,7 @@ class Notifier:
 
     def _dispatch(self, message: str, priority: str, title: str):
         """Route notification to appropriate channels."""
-        quiet = self._is_quiet_hours()
+        quiet = self.quiet_hours_enabled and self._is_quiet_hours()
 
         # Voice: always for urgent, respect quiet hours for others
         if self.voice_alerts and (priority == "urgent" or not quiet):
@@ -157,6 +159,8 @@ class Notifier:
             self.quiet_start = settings["quiet_hours_start"]
         if "quiet_hours_end" in settings:
             self.quiet_end = settings["quiet_hours_end"]
+        if "quiet_hours_enabled" in settings:
+            self.quiet_hours_enabled = settings["quiet_hours_enabled"]
         logger.info("Notifier settings updated.")
 
     # ------------------------------------------------------------------
@@ -174,8 +178,9 @@ class Notifier:
             "voice_alerts": self.voice_alerts,
             "tray_enabled": self.tray_enabled,
             "sound_enabled": self.sound_enabled,
+            "quiet_hours_enabled": self.quiet_hours_enabled,
             "quiet_hours": f"{self.quiet_start} - {self.quiet_end}",
-            "in_quiet_hours": self._is_quiet_hours(),
+            "in_quiet_hours": self.quiet_hours_enabled and self._is_quiet_hours(),
             "history_count": len(self._history),
         }
 
@@ -191,4 +196,5 @@ notifier = Notifier(
     tray_enabled=config.get("notifications.tray_enabled", True),
     quiet_start=config.get("notifications.quiet_hours_start", "23:00"),
     quiet_end=config.get("notifications.quiet_hours_end", "08:00"),
+    quiet_hours_enabled=config.get("notifications.quiet_hours_enabled", True),
 )

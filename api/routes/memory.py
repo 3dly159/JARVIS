@@ -70,3 +70,32 @@ async def palace_delete(item_id: str):
     if jarvis.memory:
         jarvis.memory.forget(item_id)
     return {"deleted": item_id}
+
+
+@router.get("/files")
+async def list_memory_files():
+    """List all files in the memory directory tree."""
+    import os
+    from pathlib import Path
+    
+    memory_root = Path(__file__).parent.parent.parent / "memory"
+    files = []
+    
+    if not memory_root.exists():
+        return []
+        
+    for root, dirs, filenames in os.walk(memory_root):
+        rel_path = os.path.relpath(root, memory_root)
+        if rel_path == ".": rel_path = ""
+        
+        for f in filenames:
+            path = os.path.join(rel_path, f)
+            stat = os.stat(os.path.join(root, f))
+            files.append({
+                "name": f,
+                "path": path,
+                "size": stat.st_size,
+                "modified": stat.st_mtime
+            })
+            
+    return files

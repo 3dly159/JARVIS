@@ -87,6 +87,11 @@ class Camera:
 
         with self._lock:
             try:
+                from core.jarvis import jarvis
+                jarvis._broadcast_state("seeing")
+            except Exception: pass
+
+            try:
                 import cv2
 
                 cap = cv2.VideoCapture(self.device_index)
@@ -158,6 +163,11 @@ class Camera:
         interval = 1.0 / self.fps
 
         with self._lock:
+            try:
+                from core.jarvis import jarvis
+                jarvis._broadcast_state("seeing")
+            except Exception: pass
+
             try:
                 import cv2
 
@@ -237,6 +247,60 @@ class Camera:
             return available
         except Exception:
             return []
+
+    # ------------------------------------------------------------------
+    # Presence detection
+    # ------------------------------------------------------------------
+
+    def is_user_present(self) -> bool:
+        """
+        Check if a face is visible in front of the camera.
+        Lightweight check via Haar cascades.
+        """
+        if not self.enabled or not self.is_available():
+            return True # Fallback if camera unavailable
+            
+        try:
+            import cv2
+            import numpy as np
+            import os
+
+            # Snap a frame (internal lock handled by snap())
+            raw_jpeg = self.snap(encode=False)
+            if not raw_jpeg:
+                return False
+
+            # Load face cascade
+            cascade_path = os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
+            if not os.path.exists(cascade_path):
+                logger.warning(f"Haar cascade file not found at {cascade_path}")
+                return True
+
+            face_cascade = cv2.CascadeClassifier(cascade_path)
+
+            # Decode bytes to image
+            nparr = np.frombuffer(raw_jpeg, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                return False
+
+            # Convert to gray
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+            # Detect faces
+            faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+            present = len(faces) > 0
+            
+            if present:
+                logger.info(f"User presence confirmed ({len(faces)} face(s)).")
+            else:
+                logger.debug("No user detected in camera view.")
+                
+            return present
+
+        except Exception as e:
+            logger.error(f"Presence detection failed: {e}")
+            return True # Conservative fallback
 
     # ------------------------------------------------------------------
     # Context for brain

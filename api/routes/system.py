@@ -5,7 +5,7 @@ from fastapi import APIRouter
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("")
 async def system_status():
     from core.jarvis import jarvis
     return jarvis.status()
@@ -56,3 +56,73 @@ async def disable_autostart():
     from system.startup import startup
     ok = startup.disable_autostart()
     return {"disabled": ok}
+
+
+@router.get("/processes")
+async def get_processes(limit: int = 10):
+    import psutil
+    processes = []
+    for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent', 'status']):
+        try:
+            pinfo = proc.info
+            # Filter out zero CPU unless it's a jarvis process
+            if pinfo['cpu_percent'] > 0.1 or 'jarvis' in pinfo['name'].lower():
+                processes.append({
+                    "pid": pinfo['pid'],
+                    "name": pinfo['name'],
+                    "cpu": f"{pinfo['cpu_percent']:.1f}%",
+                    "mem": f"{pinfo['memory_percent']:.1f}%",
+                    "state": "success" if pinfo['status'] == 'running' else "info"
+                })
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    
+    # Sort by CPU and limit
+    processes.sort(key=lambda x: float(x['cpu'].replace('%', '')), reverse=True)
+    return processes[:limit]
+
+
+@router.get("/agents")
+async def get_agents():
+    from core.agent_manager import agent_manager
+    return [a.to_dict() for a in agent_manager.list_all()]
+
+
+@router.post("/agents")
+async def spawn_agent(data: dict):
+    from core.agent_manager import agent_manager, AgentType, autonomous_work
+    name = data.get("name", "Sentinel")
+    task = data.get("task", "")
+    steps = data.get("steps", [])
+    mission_type = data.get("type", "general")
+    
+    # Combine steps into directive
+    full_directive = task
+    if steps:
+        steps_str = "\n".join(f"- {s}" for s in steps)
+        full_directive = f"{task}\n\nCritical Steps:\n{steps_str}"
+        
+    a_type = AgentType.GENERAL
+    try:
+        a_type = AgentType(mission_type)
+    except ValueError:
+        pass
+        
+    agent = await agent_manager.spawn(
+        name=name,
+        task=full_directive,
+        agent_type=a_type,
+        work_fn=autonomous_work(full_directive)
+    )
+    
+    if not agent:
+        return {"error": "Pool full", "status": "failed"}, 400
+        
+    return {"id": agent.id, "status": "deployed"}
+
+
+@router.delete("/agents/{agent_id}")
+async def kill_agent(agent_id: str):
+    from core.agent_manager import agent_manager
+    agent_manager.kill(agent_id)
+    return {"status": "terminated"}

@@ -33,7 +33,7 @@ DEFAULTS = {
         "model": "gemma4:latest",
         "ollama_host": "http://localhost:11434",
         "temperature": 0.7,
-        "context_window": 16384,
+        "context_window": 163840,
     },
     "voice": {
         "tts_engine": "edge-tts",
@@ -84,6 +84,7 @@ DEFAULTS = {
         "voice_alerts": True,
         "quiet_hours_start": "23:00",
         "quiet_hours_end": "08:00",
+        "quiet_hours_enabled": True,
     },
     "logging": {
         "level": "INFO",

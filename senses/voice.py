@@ -18,9 +18,14 @@ import threading
 import time
 import tempfile
 import os
+import numpy as np
+import soundfile as sf
+import sounddevice as sd
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+from senses.mic_bridge import mic_bridge
 
 logger = logging.getLogger("jarvis.voice")
 
@@ -39,6 +44,7 @@ class Voice:
         quiet_start: str = "23:00",
         quiet_end: str = "08:00",
         volume: str = "+0%",
+        quiet_hours_enabled: bool = False,
     ):
         self.voice = voice
         self.rate = rate
@@ -46,12 +52,16 @@ class Voice:
         self.volume = volume
         self.quiet_start = quiet_start
         self.quiet_end = quiet_end
+        self.quiet_hours_enabled = quiet_hours_enabled
         self.enabled = True
         self.muted = False
+        self.is_speaking = False
+        self.on_finished: Optional[Callable[[], None]] = None
 
         self._queue: queue.Queue = queue.Queue()
         self._worker_thread = threading.Thread(target=self._worker, daemon=True, name="voice-worker")
         self._worker_thread.start()
+        logger.info(f"Voice engine worker thread online.")
         logger.info(f"Voice online. Voice: {voice}, Rate: {rate}")
 
     # ------------------------------------------------------------------
@@ -68,8 +78,8 @@ class Voice:
         if self.muted or not self.enabled:
             logger.debug(f"Voice muted/disabled. Would say: {text[:60]}")
             return
-        if self._is_quiet_hours():
-            logger.debug(f"Quiet hours. Suppressing: {text[:60]}")
+        if self.quiet_hours_enabled and self._is_quiet_hours():
+            logger.info(f"Vocal response suppressed (Quiet Hours): {text[:60]}...")
             return
 
         if priority:
@@ -81,7 +91,25 @@ class Voice:
                     break
 
         self._queue.put(text)
-        logger.debug(f"Queued: {text[:60]}")
+        logger.info(f"Vocal directive queued: {text[:60]}...")
+
+    def stop(self):
+        """Immediately stop playback and clear the queue."""
+        import sounddevice as sd
+        try:
+            sd.stop()
+        except Exception:
+            pass
+        
+        # Clear queue
+        while not self._queue.empty():
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                break
+        
+        self.is_speaking = False
+        logger.info("Voice playback stopped and queue cleared.")
 
     def speak_now(self, text: str):
         """Speak immediately, blocking until done. Bypasses queue."""
@@ -109,6 +137,8 @@ class Voice:
             self.quiet_start = settings["quiet_hours_start"]
         if "quiet_hours_end" in settings:
             self.quiet_end = settings["quiet_hours_end"]
+        if "quiet_hours_enabled" in settings:
+            self.quiet_hours_enabled = settings["quiet_hours_enabled"]
         logger.info(f"Voice settings updated: {settings}")
 
     # ------------------------------------------------------------------
@@ -147,13 +177,52 @@ class Voice:
                 tmp_path = tmp.name
 
             await communicate.save(tmp_path)
+            
+            # Record playback start
+            logger.info(f"Vocalizing: {text[:60]}...")
 
             # Play audio
             data, samplerate = sf.read(tmp_path)
-            sd.play(data, samplerate)
-            sd.wait()
+            
+            # 1. Calculate and set expected volume baseline FIRST
+            try:
+                rms = float(np.sqrt(np.mean(data**2)))
+                # Normalize and scale if needed (optional)
+                mic_bridge.expected_speaker_rms = rms
+                logger.info(f"Vocal baseline set: {rms:.4f}")
+            except Exception as e:
+                logger.warning(f"RMS calculation failed: {e}")
 
+            # 2. Now set the flag that ears.py is watching
+            self.is_speaking = True
+            
+            # Broadcast state to UI
+            try:
+                from core.jarvis import jarvis
+                jarvis._broadcast_state("speaking")
+            except Exception: pass
+
+            sd.play(data, samplerate)
+            
+            # Use a slightly more robust waiting logic
+            while sd.get_stream().active:
+                time.sleep(0.05)
+            
+            # Reset baseline
+            try:
+                mic_bridge.expected_speaker_rms = 0.0
+            except Exception: pass
+            
+            self.is_speaking = False
+            logger.info("Vocalization complete.")
             os.unlink(tmp_path)
+            
+            # Trigger finished callback
+            if self.on_finished:
+                try:
+                    self.on_finished()
+                except Exception as e:
+                    logger.error(f"Voice finished callback error: {e}")
 
         except ImportError as e:
             logger.error(f"Missing dependency: {e}. Install: pip install edge-tts sounddevice soundfile")
@@ -183,6 +252,7 @@ class Voice:
             "enabled": self.enabled,
             "muted": self.muted,
             "queue_size": self._queue.qsize(),
+            "quiet_hours_enabled": self.quiet_hours_enabled,
             "quiet_hours": f"{self.quiet_start} - {self.quiet_end}",
         }
 
@@ -199,6 +269,7 @@ voice = Voice(
     pitch=config.get("voice.tts_pitch", "+0Hz"),
     quiet_start=config.get("notifications.quiet_hours_start", "23:00"),
     quiet_end=config.get("notifications.quiet_hours_end", "08:00"),
+    quiet_hours_enabled=config.get("notifications.quiet_hours_enabled", True),
 )
 
 

@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("")
 async def list_skills():
     from skills.loader import skill_loader
     return skill_loader.list_skills()

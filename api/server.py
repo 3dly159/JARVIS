@@ -11,19 +11,39 @@ Or via main.py: jarvis.ui.run()
 
 import logging
 import threading
+import mimetypes
+import httpx
+import subprocess
+import os
+import signal
+import time
 from pathlib import Path
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from typing import Optional
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
+
+# Initialize MIME types for modern web files
+mimetypes.init()
+mimetypes.add_type('application/javascript', '.tsx')
+mimetypes.add_type('application/javascript', '.ts')
+mimetypes.add_type('application/javascript', '.jsx')
+mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type('application/javascript', '.mjs')
+mimetypes.add_type('text/css', '.css')
 
 logger = logging.getLogger("jarvis.ui")
 
+# Initialize the JARVIS orchestrator if not already initialized
+from core.jarvis import jarvis
+if not jarvis._initialized:
+    jarvis.initialize()
+
 ROOT = Path(__file__).parent.parent
-# UI build output - using orb UI now
-ORB_UI_DIR = ROOT / "ui_orb"
-STATIC_DIR = ROOT / "ui" / "dist"  # Keep for fallback
+# UI build output - integrated Arc HUD
+UI_DIST_DIR = ROOT / "ui_arc"
+UI_ASSETS_DIR = UI_DIST_DIR / "dist" / "client" / "assets"
 
 
 def create_app():
@@ -38,7 +58,7 @@ def create_app():
     )
 
     # Register all API route modules under /api/
-    from api.routes import chat, sessions, settings, agents, tasks, memory, system, skills, voice, state
+    from api.routes import chat, sessions, settings, agents, tasks, memory, system, skills, voice, state, logs, tools, files
     app.include_router(chat.router,     prefix="/api/chat",     tags=["chat"])
     app.include_router(sessions.router, prefix="/api/sessions", tags=["sessions"])
     app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
@@ -49,28 +69,69 @@ def create_app():
     app.include_router(skills.router,   prefix="/api/skills",   tags=["skills"])
     app.include_router(voice.router,    prefix="/api/voice",    tags=["voice"])
     app.include_router(state.router,    prefix="/api/state",    tags=["state"])
+    app.include_router(logs.router,     prefix="/api/logs",     tags=["logs"])
+    app.include_router(tools.router,    prefix="/api/tools",    tags=["tools"])
+    app.include_router(files.router,    prefix="/api/files",    tags=["files"])
 
-    # Middleware for SPA fallback: if request is not for /api/ and the requested file does not exist,
-    # serve index.html (single-page app).
     @app.middleware("http")
     async def spa_fallback(request: Request, call_next):
-        if request.url.path.startswith("/api"):
+        # 1. Bypass for API and health checks
+        if request.url.path.startswith("/api") or request.url.path.startswith("/health"):
             return await call_next(request)
-        # Check if file exists in static directory
-        rel_path = request.url.path.lstrip("/")
-        if rel_path == "":
-            rel_path = "index.html"
-        file_path = STATIC_DIR / rel_path
-        if file_path.is_file():
-            return await call_next(request)
-        else:
-            # Serve index.html
-            index_path = STATIC_DIR / "index.html"
-            return FileResponse(index_path)
+        
+        # 2. Try proxying to the Node.js SSR Server (port 3000)
+        # This is where run-server.js handles TanStack Start SSR.
+        try:
+            async with httpx.AsyncClient() as client:
+                proxy_url = f"http://localhost:3000{request.url.path}"
+                if request.query_params:
+                    proxy_url += f"?{request.query_params}"
+                
+                # Check if the SSR server is alive
+                proxy_res = await client.request(
+                    method=request.method,
+                    url=proxy_url,
+                    headers={k: v for k, v in request.headers.items() if k.lower() != "host"},
+                    content=await request.body() if request.method not in ("GET", "HEAD") else None,
+                    timeout=1.0
+                )
+                
+                return Response(
+                    content=proxy_res.content,
+                    status_code=proxy_res.status_code,
+                    headers={k: v for k, v in proxy_res.headers.items() if k.lower() not in ("content-length", "transfer-encoding")}
+                )
+        except (httpx.ConnectError, httpx.TimeoutException):
+            # SSR server is not running or timed out, fall back to API or static assets
+            pass
 
-    # Mount static files to serve assets, index.html, etc.
-    STATIC_DIR.mkdir(parents=True, exist_ok=True)
-    app.mount("/", StaticFiles(directory=str(STATIC_DIR)), name="static")
+        # 3. Fallback to static serving and SPA routing
+        response = await call_next(request)
+        
+        # 4. If it's a 404 on a non-API route, serve index.html (SPA Fallback)
+        if response.status_code == 404:
+            # Look for index.html in the UI_DIST_DIR or its dist folder
+            # Note: We deleted the manual root index.html, so we look for built one
+            index_path = UI_DIST_DIR / "dist" / "client" / "index.html"
+            if not index_path.exists():
+                index_path = UI_DIST_DIR / "index.html" # Legacy/Template fallback
+                
+            if index_path.exists():
+                return FileResponse(index_path)
+                
+        return response
+
+    # Mount static files
+    if UI_ASSETS_DIR.exists():
+        # Relative to index.html, assets are at /dist/client/assets
+        app.mount("/dist/client/assets", StaticFiles(directory=str(UI_ASSETS_DIR)), name="assets")
+    
+    if UI_DIST_DIR.exists():
+        app.mount("/", StaticFiles(directory=str(UI_DIST_DIR), html=True), name="static")
+
+    @app.get("/")
+    async def read_index():
+        return FileResponse(UI_DIST_DIR / "index.html")
 
     @app.get("/health")
     async def health():
@@ -91,6 +152,14 @@ class UIServer:
         self._server = None
         self._thread: Optional[threading.Thread] = None
 
+    async def serve(self):
+        """Async start server (non-blocking in current loop)."""
+        import uvicorn
+        logger.info(f"UI server starting at http://{self.host}:{self.port}")
+        config = uvicorn.Config(app, host=self.host, port=self.port, log_level="warning")
+        self._server = uvicorn.Server(config)
+        await self._server.serve()
+
     def run(self):
         """Start server (blocking)."""
         import uvicorn
@@ -106,4 +175,3 @@ class UIServer:
     def stop(self):
         if self._server:
             self._server.should_exit = True
-

@@ -16,6 +16,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 from core.config_manager import config as cfg
+import core.context as ctx
 
 logger = logging.getLogger("jarvis.core")
 ROOT = Path(__file__).parent.parent
@@ -28,8 +29,10 @@ class JARVISOrchestrator:
     """
 
     def __init__(self):
-        self.config: dict = {}
+        self.loop = None
         self._initialized = False
+        self.conversation_active = False
+        self._followup_timer: Optional[threading.Timer] = None
 
         # Core
         self.brain        = None
@@ -37,6 +40,8 @@ class JARVISOrchestrator:
         self.context      = None
         self.tasks        = None
         self.agents       = None
+        self.cognition    = None
+        self.goals        = None
 
         # Senses
         self.ears         = None
@@ -76,13 +81,19 @@ class JARVISOrchestrator:
         logger.info("  J.A.R.V.I.S. — Initializing")
         logger.info("=" * 50)
 
+        # Capture the main event loop for background thread communication
+        import asyncio
+        self.loop = asyncio.get_running_loop()
+
         self._init_context()
         self._init_memory()
         self._init_tools()
         self._init_brain()
+        self._init_monitor()
         self._init_tasks()
         self._init_agents()
         self._init_skills()
+        self._init_cognition()
 
         self._initialized = True
         self.memory.log("JARVIS online.", category="system")
@@ -91,10 +102,29 @@ class JARVISOrchestrator:
         logger.info("=" * 50)
 
     def _init_context(self):
-        from core.context_loader import ContextLoader
-        self.context = ContextLoader(root=ROOT)
+        from core.context_loader import context_loader
+        self.context = context_loader
         self.context.refresh()
-        logger.info("  [1/5] Context loaded")
+        
+        # Session Reconnaissance: find latest active session from disk
+        try:
+            sessions_dir = ROOT / "data" / "sessions"
+            if sessions_dir.exists():
+                session_files = list(sessions_dir.glob("*.json"))
+                if session_files:
+                    # Sort by modification time (latest first)
+                    latest_file = max(session_files, key=lambda f: f.stat().st_mtime)
+                    ctx.last_active_session = latest_file.stem
+                    logger.info(f"  [1/5] Context synchronized (Focus: {ctx.last_active_session})")
+                else:
+                    ctx.last_active_session = "default"
+                    logger.info("  [1/5] Context synchronized (Focus: default)")
+            else:
+                ctx.last_active_session = "default"
+                logger.info("  [1/5] Context synchronized (Focus: default)")
+        except Exception as e:
+            logger.warning(f"  [1/5] Context synchronized (Focus error: {e})")
+            ctx.last_active_session = "default"
 
     def _init_memory(self):
         from core.memory import Memory
@@ -104,7 +134,7 @@ class JARVISOrchestrator:
     def _init_tools(self):
         from tools.registry import registry
         # Import tool modules to trigger registration
-        from tools import file_browser, web_search, browser_control
+        from tools import file_browser, web_search, browser_control, memory, agents
         self.tools = registry
         logger.info("  [+] Tools registered")
 
@@ -134,6 +164,12 @@ class JARVISOrchestrator:
         self.brain.inject_context(context_summary)
         logger.info("  [3/5] Brain online")
 
+    def _init_monitor(self):
+        from system.monitor import monitor
+        self.monitor = monitor
+        self.monitor.start(interval=cfg.get("monitor.check_interval_seconds", 2))
+        logger.info("  [3.5/5] System monitor active")
+
     def _init_tasks(self):
         from core.task_tracker import TaskTracker
         self.tasks = TaskTracker(
@@ -147,12 +183,11 @@ class JARVISOrchestrator:
         logger.info("  [4/5] Task tracker online")
 
     def _init_agents(self):
-        from core.agent_manager import AgentManager
-        self.agents = AgentManager(
-            max_agents=cfg.get("agents.max_agents"),
-            max_parallel=cfg.get("agents.max_parallel"),
-            on_agent_done=self._on_agent_done,
-        )
+        from core.agent_manager import agent_manager
+        self.agents = agent_manager
+        self.agents.max_agents = cfg.get("agents.max_agents") or self.agents.max_agents
+        self.agents.max_parallel = cfg.get("agents.max_parallel") or self.agents.max_parallel
+        self.agents.on_agent_done = self._on_agent_done
         self.agents.start()
         logger.info("  [5/5] Agent manager online")
 
@@ -189,19 +224,24 @@ class JARVISOrchestrator:
         )
         logger.info(f"  [+] Skills loaded: {skill_loader.status()['loaded']} skill(s)")
 
+    def _init_cognition(self):
+        from core.cognition import cognition
+        from core.goal_manager import goal_manager
+        self.cognition = cognition
+        self.goals = goal_manager
+        self.cognition.start()
+        logger.info("  [6/5] Cognition loop active (Nervous system online)")
+
     # ------------------------------------------------------------------
     # Late-init senses (called after core is up)
     # ------------------------------------------------------------------
 
     def init_senses(self):
-        """Initialize senses. Called after core is confirmed working."""
+        """Initialize senses via modular singletons."""
         try:
-            from senses.voice import Voice
-            self.voice = Voice(
-                voice=cfg.get("voice.tts_voice"),
-                rate=cfg.get("voice.tts_rate"),
-                pitch=cfg.get("voice.tts_pitch"),
-            )
+            from senses.voice import voice
+            self.voice = voice
+            self.voice.on_finished = self._handle_speech_finished
             # Hot-reload voice settings
             cfg.on_change("voice", lambda k, o, n: self.voice.update(cfg.section("voice")) if self.voice else None)
             logger.info("  [senses] Voice online")
@@ -209,29 +249,23 @@ class JARVISOrchestrator:
             logger.warning(f"  [senses] Voice unavailable: {e}")
 
         try:
-            from senses.ears import Ears
-            self.ears = Ears(
-                model_size=cfg.get("voice.stt_model"),
-                device=cfg.get("voice.stt_device"),
-            )
+            from senses.ears import ears
+            self.ears = ears
             logger.info("  [senses] Ears online")
         except Exception as e:
             logger.warning(f"  [senses] Ears unavailable: {e}")
 
         try:
-            from senses.eyes import Eyes
-            self.eyes = Eyes()
+            from senses.eyes import eyes
+            self.eyes = eyes
             logger.info("  [senses] Eyes online")
         except Exception as e:
             logger.warning(f"  [senses] Eyes unavailable: {e}")
 
         try:
-            from senses.wake import WakeListener
-            self.wake = WakeListener(
-                wake_word=cfg.get("voice.wake_word"),
-                hotkey=cfg.get("voice.hotkey"),
-                on_wake=self._on_wake,
-            )
+            from senses.wake import wake_listener
+            self.wake = wake_listener
+            self.wake.start(on_wake=self._on_wake)
             logger.info("  [senses] Wake listener online")
         except Exception as e:
             logger.warning(f"  [senses] Wake listener unavailable: {e}")
@@ -245,8 +279,10 @@ class JARVISOrchestrator:
                 tray_enabled=cfg.get("notifications.tray_enabled"),
                 quiet_start=cfg.get("notifications.quiet_hours_start"),
                 quiet_end=cfg.get("notifications.quiet_hours_end"),
+                quiet_hours_enabled=cfg.get("notifications.quiet_hours_enabled"),
             )
             cfg.on_change("notifications", lambda k, o, n: self.notifier.update(cfg.section("notifications")) if self.notifier else None)
+            cfg.on_change("notifications", lambda k, o, n: self.voice.update(cfg.section("notifications")) if self.voice else None)
             logger.info("  [notif] Notifier online")
         except Exception as e:
             logger.warning(f"  [notif] Notifier unavailable: {e}")
@@ -267,51 +303,154 @@ class JARVISOrchestrator:
     # Main conversation interface
     # ------------------------------------------------------------------
 
-    def chat(self, user_input: str) -> str:
+    def _require_initialized(self):
+        if not self._initialized:
+            raise RuntimeError("JARVIS not initialized. Call initialize() first.")
+
+    def _broadcast_state(self, state: str):
+        if self.ui:
+            self.ui.broadcast("state", {"status": state})
+
+    def interrupt(self):
+        """Stop current activity and reset state."""
+        if self.voice:
+            self.voice.stop()
+        self._broadcast_state("interrupted")
+        self.memory.log("Interruption requested.", category="system")
+        
+        # If we were in a follow-up, reset it
+        if self._followup_timer:
+            self._followup_timer.cancel()
+            self._followup_timer = None
+        
+        self.conversation_active = False
+
+    async def chat(self, user_input: str) -> str:
         """
         Main entry point for user input.
-        Logs conversation, sends to brain, logs response.
-        Returns full response string.
+        If called via voice (no session context), falls back to last active session
+        and broadcasts to UI.
         """
         self._require_initialized()
+        
+        # Resolve target session
+        session_id = ctx.session_id_ctx.get() or ctx.last_active_session or "default"
+        is_voice = ctx.session_id_ctx.get() is None
+        
+        # Handle silence / empty input (usually from voice follow-up timeout)
+        if not user_input or not user_input.strip():
+            if is_voice and self.conversation_active:
+                logger.info("Silence detected. Returning to idle...")
+                self.conversation_active = False
+                self._broadcast_state("idle")
+            return ""
+
+        # If voice, notify UI we are receiving speech
+        if is_voice and session_id:
+            try:
+                from api.routes.chat import chat_broadcaster, save_session_message
+                save_session_message(session_id, "user", f"[Voice]: {user_input}")
+                await chat_broadcaster.send(session_id, {
+                    "segment": {"type": "text", "content": f"\n\n[Voice]: {user_input}\n", "role": "user"},
+                    "done": False,
+                    "source": "voice"
+                })
+            except Exception: pass
+
         self.memory.log_conversation("user", user_input)
         self._broadcast_state("thinking")
+        
+        # Notify cognition of activity
+        if self.cognition:
+            self.cognition.state_builder.update_interaction()
 
         task_summary = self.tasks.summary()
         if task_summary != "No active tasks.":
             self.brain.inject_context(f"Current tasks:\n{task_summary}")
 
-        response = self.brain.chat_full(user_input)
+        response = await self.brain.chat_full(user_input)
         self.memory.log_conversation("jarvis", response)
 
-        if self.voice:
-            self._broadcast_state("speaking")
-            self.voice.speak(response)
+        # Broadcast response to UI if voice-triggered
+        if is_voice and session_id:
+            try:
+                from api.routes.chat import chat_broadcaster, save_session_message
+                save_session_message(session_id, "jarvis", response)
+                await chat_broadcaster.send(session_id, {
+                    "segment": {"type": "text", "content": response, "role": "assistant"},
+                    "done": True,
+                    "source": "voice"
+                })
+            except Exception: pass
 
-        self._broadcast_state("standby")
+        if self.voice:
+            # SANITIZE: Ensure we don't speak raw JSON or data blocks
+            clean_response = self._sanitize_for_speech(response)
+            if clean_response:
+                logger.info(f"Handing off to voice engine: {clean_response[:60]}...")
+                self.voice.speak(clean_response)
+            
+            # If this is a vocal interaction, activate Follow-up Mode
+            if is_voice:
+                self._start_followup_loop(session_id)
+        
+        # We don't broadcast idle here anymore; voice on_finished or follow-up loop handles it
         return response
 
-    def chat_stream(self, user_input: str):
+    def _start_followup_loop(self, session_id: str):
+        """Prepares for a follow-up interaction."""
+        self.conversation_active = True
+        logger.info("Conversation active. Waiting for speech to finish...")
+
+    def _handle_speech_finished(self):
+        """Triggered by Voice engine when playback ends."""
+        if not self.conversation_active:
+            return
+            
+        logger.info("Follow-up window open. Listening...")
+        self._broadcast_state("listening")
+        
+        try:
+            from senses.ears import ears
+            # Listen once for a reply. If captured, chat() will be called, 
+            # which will then re-trigger _start_followup_loop.
+            ears.listen_once(callback=self.chat)
+        except Exception as e:
+            logger.error(f"Follow-up error: {e}")
+            self.conversation_active = False
+
+    async def chat_stream(self, user_input: str):
         """
-        Streaming version of chat. Yields tokens as they arrive.
+        Streaming version of chat. Yields structured dictionaries.
         Logs conversation when complete. Broadcasts state changes.
         """
         self._require_initialized()
         self.memory.log_conversation("user", user_input)
         self._broadcast_state("thinking")
 
-        full_response = ""
-        for token in self.brain.chat(user_input):
-            full_response += token
-            yield token
+        full_text = ""
+        voice_text = ""
+        
+        # We accumulate text to speak, but only if it doesn't look like a tool call block
+        async for segment in self.brain.chat(user_input):
+            yield segment
+            
+            if segment["type"] == "text":
+                token = segment["content"]
+                full_text += token
+                
+                # Simple logic: if the current accumulated text in this segment block 
+                # doesn't start with a tool-call JSON brace, we consider it "speakable".
+                voice_text += token
 
-        self.memory.log_conversation("jarvis", full_response)
+        # Persist the full raw log (including tool calls if they were in the text)
+        self.memory.log_conversation("jarvis", full_text)
 
-        if self.voice and full_response:
-            self._broadcast_state("speaking")
-            self.voice.speak(full_response)
-
-        self._broadcast_state("standby")
+        # Trigger voice only for "clean" text
+        if self.voice:
+            clean_voice = self._sanitize_for_speech(voice_text)
+            if clean_voice:
+                self.voice.speak(clean_voice)
 
     # ------------------------------------------------------------------
     # Event handlers (called by modules)
@@ -338,15 +477,57 @@ class JARVISOrchestrator:
         if self.notifier:
             self.notifier.alert(msg, priority="info")
 
-    def _on_agent_done(self, agent, result):
+    async def _on_agent_done(self, agent, result):
         logger.info(f"Agent done: {agent.name}")
         self.memory.log(f"Agent '{agent.name}' finished. Result: {result[:100]}", category="agent")
+        
+        # Audio notification
+        if self.voice:
+            self.voice.speak(f"Sir, the {agent.name} mission is complete.")
+
+        # UI Notification
+        if self.notifier:
+            self.notifier.info(f"Agent '{agent.name}' task complete, sir.")
+
+        # Session Reporting: If spawned from chat, send result to the UI
+        if agent.session_id:
+            try:
+                from api.routes.chat import chat_broadcaster, save_session_message
+                
+                report_title = f"MISSION REPORT: {agent.name}"
+                formatted_result = f"### {report_title}\n\n{result}"
+                
+                # Broadcaster push (live UI update)
+                payload = {
+                    "segment": {"type": "text", "content": f"\n\n---\n{formatted_result}\n---"},
+                    "done": True,
+                    "agent_id": agent.id
+                }
+                await chat_broadcaster.send(agent.session_id, payload)
+                
+                # History Persistence
+                save_session_message(
+                    session_id=agent.session_id, 
+                    role="jarvis", 
+                    content=formatted_result,
+                    parts=[{"type": "text", "text": formatted_result}]
+                )
+                logger.debug(f"Mission report delivered to session {agent.session_id}")
+            except Exception as e:
+                logger.error(f"Failed to deliver mission report: {e}")
 
     def _on_wake(self, source: str):
-        """Called when wake word or hotkey is triggered."""
+        """Standard wake word trigger."""
+        if not self._initialized: return
         logger.info(f"Wake triggered via {source}")
+
+        # Broadcast state locally
+        self._broadcast_state("speaking")
+
         if self.voice:
-            self.voice.speak("Yes, sir?")
+            self.voice.speak_now("Yes sir?")
+        
+        # After saying "Yes sir?", start listening (which will broadcast "listening")
         if self.ears:
             self.ears.listen_once(callback=self.chat)
 
@@ -356,11 +537,12 @@ class JARVISOrchestrator:
 
     def _broadcast_state(self, state: str):
         """Broadcast state to all connected UI clients."""
+        logger.debug(f"State transition: {state}")
         try:
-            from ui.routes.state import set_state_sync
+            from api.routes.state import set_state_sync
             set_state_sync(state)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to broadcast state '{state}': {e}")
 
     def _require_initialized(self):
         if not self._initialized:
@@ -391,6 +573,36 @@ class JARVISOrchestrator:
         """
         from actions.confirm import confirm as gate
         return gate.request(description, action_type=action_type, voice_prompt=True)
+
+    def _sanitize_for_speech(self, text: str) -> str:
+        """
+        Strips technical artifacts (JSON, Markdown, Tool calls) from text 
+        to ensure only natural language is spoken.
+        """
+        if not text:
+            return ""
+            
+        import re
+        
+        # 1. Remove Markdown code blocks (```...``` or `...`)
+        # Use DOTALL to catch multi-line blocks
+        text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+        text = re.sub(r'`.*?`', '', text)
+        
+        # 2. Remove JSON-like blocks (anything between balanced braces that looks technical)
+        # For simplicity, we remove all { ... } blocks that contain typical JSON keys
+        text = re.sub(r'\{.*?"(tool|action|args|result|status)".*?\}', '', text, flags=re.DOTALL)
+        
+        # 3. Remove raw tool call indicators (e.g. Call: tool_name)
+        text = re.sub(r'(Call|Tool|Action|Result):\s*.*', '', text, flags=re.IGNORECASE)
+        
+        # 4. Clean up any leftover Markdown artifacts
+        text = re.sub(r'([\#\*\-\+\>\_\~\[\]\(\)])', '', text)
+        
+        # 5. Collapse multiple white spaces/newlines
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        return text
 
     def status(self) -> dict:
         return {
