@@ -358,19 +358,19 @@ class CognitiveKernel:
             
             time.sleep(10)
 
-    def _check_curiosity(self, state: dict):
+    def _check_curiosity(self, state: CognitiveState):
         """Low-frequency autonomous trigger for exploration."""
-        if state["idle_time"] > 180 and state["focus_level"] == "low" and "curiosity" not in self._fired_thresholds:
+        if state.idle_time > 180 and state.focus < 0.4 and "curiosity" not in self._fired_thresholds:
             self.trigger("curiosity")
             self._fired_thresholds.add("curiosity")
 
-    def _check_compound_triggers(self, state: dict):
+    def _check_compound_triggers(self, state: CognitiveState):
         """Derives high-level states from raw sensory signals with resolution logic."""
         now = time.time()
         
         # 1. Distraction State (Hysteresis)
-        switch_freq = state.get("app_switch_frequency", 0)
-        is_stagnant = state.get("task_velocity") == "stagnant"
+        switch_freq = state.switch_rate
+        is_stagnant = state.progress < 0.2
         distraction_conf = min(1.0, switch_freq + (0.3 if is_stagnant else 0))
         
         if distraction_conf > 0.7 and "distraction_state" not in self._active_states:
@@ -383,7 +383,7 @@ class CognitiveKernel:
             self._active_states.remove("distraction_state")
             
         # 2. Flow State (Positive Partnering)
-        if switch_freq < 0.2 and state.get("task_velocity") == "productive":
+        if switch_freq < 0.2 and state.progress > 0.7:
             if "flow_state" not in self._active_states:
                 logger.info("Cognition: FLOW detected. Protecting focus.")
                 self._active_states.add("flow_state")
@@ -403,7 +403,7 @@ class CognitiveKernel:
                  self.trigger("frustration_state")
 
         # 4. Stuck State
-        idle_time = state.get("idle_time", 0)
+        idle_time = state.idle_time
         if is_stagnant and idle_time > 300 and "stuck_state" not in self._active_states:
              logger.info("Cognition: USER STUCK detected.")
              self._active_states.add("stuck_state")
@@ -417,10 +417,10 @@ class CognitiveKernel:
             if s not in self._active_states:
                 del self._state_durations[s]
 
-    def _check_time_triggers(self, state: dict):
+    def _check_time_triggers(self, state: CognitiveState):
         """R reliably detects crossings of time thresholds and returns."""
         from core.jarvis import jarvis
-        idle_time = state.get("idle_time", 0)
+        idle_time = state.idle_time
         
         # User Return Detection (Transition Detection)
         if self._previous_idle_time > 300 and idle_time < 5:
@@ -507,7 +507,7 @@ class CognitiveKernel:
             logger.error(f"Cognition step failed: {e}")
             return False
 
-    def _calculate_interrupt_cost(self, state: dict) -> float:
+    def _calculate_interrupt_cost(self, state: CognitiveState) -> float:
         """
         Calculates the 'social cost' of interrupting the user.
         Formula: (Focus * Factor) + (Speech * Penalty) + (Recency * Exp-Decay)
@@ -515,9 +515,7 @@ class CognitiveKernel:
         from core.jarvis import jarvis
         
         # 1. Focus Penalty
-        focus_map = {"high": 0.8, "med": 0.5, "low": 0.2}
-        focus_level = focus_map.get(state.get("focus_level"), 0.2)
-        cost = focus_level * 1.0  # weight 1.0
+        cost = state.focus * 1.0  # weight 1.0
         
         # 2. Voice Penalty (Don't talk over yourself or user)
         if jarvis.voice and jarvis.voice.is_speaking:
@@ -532,15 +530,15 @@ class CognitiveKernel:
         
         return cost
 
-    def _is_meaningful(self, trigger: str, state: dict) -> bool:
+    def _is_meaningful(self, trigger: str, state: CognitiveState) -> bool:
         """
         Heuristics to filter out noise BEFORE calling the LLM.
         Implements 'Stagnation Escape' and 'Focus Suppression'.
         """
         # Focus Suppression: Respect the 'Zone'
-        if state.get("focus_level") == "high":
+        if state.focus > 0.8:
             # Stagnation Escape: If idle too long in focus mode, maybe stuck?
-            if state["idle_time"] > 300: # 5 minutes
+            if state.idle_time > 300: # 5 minutes
                 logger.info("Focus mode override: User may be stuck (idle > 300s).")
                 return True
             
@@ -554,7 +552,7 @@ class CognitiveKernel:
         
         return True
 
-    async def _delayed_reflect(self, decision: dict, initial_state: dict, trigger: str, action_time: float):
+    async def _delayed_reflect(self, decision: dict, initial_state: CognitiveState, trigger: str, action_time: float):
         """
         Analyze the outcome after a delay.
         Updates adaptive weights based on engagement signals.
@@ -571,8 +569,8 @@ class CognitiveKernel:
         
         engagement = {
             "responded_vocal": user_reacted,
-            "task_updated": end_state["task_velocity"] == "productive" and initial_state["task_velocity"] == "stagnant",
-            "app_switched": end_state["user_activity"] != initial_state["user_activity"],
+            "task_updated": end_state.progress > initial_state.progress + 0.1,
+            "app_switched": end_state.active_app != initial_state.active_app,
             "latency": latency
         }
         
@@ -587,7 +585,7 @@ class CognitiveKernel:
         # Flow Penalty: If we interrupted during Flow and were ignored -> HEAVY penalty (-0.5)
         current_weight = self.priority_weights.get(trigger, 1.0)
         
-        is_flow = "flow_state" in initial_state.get("active_states", [])
+        is_flow = "flow_state" in initial_state.active_states
         
         if is_engaged:
             new_weight = current_weight + 0.1

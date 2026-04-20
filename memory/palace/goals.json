@@ -1,0 +1,30 @@
+[
+  {
+    "name": "user_productivity",
+    "description": "Monitor for signs of being stuck or distracted; offer help.",
+    "priority": 2,
+    "created_at": null,
+    "status": "active"
+  },
+  {
+    "name": "system_harmony",
+    "description": "Ensure the system is not overheated or struggling for resources.",
+    "priority": 1,
+    "created_at": null,
+    "status": "active"
+  },
+  {
+    "name": "social_engagement",
+    "description": "Maintain a natural presence; avoid being too silent or too annoying.",
+    "priority": 3,
+    "created_at": null,
+    "status": "active"
+  },
+  {
+    "name": "task_completion",
+    "description": "Nudge the user to finish active tasks and meet deadlines.",
+    "priority": 2,
+    "created_at": null,
+    "status": "active"
+  }
+]

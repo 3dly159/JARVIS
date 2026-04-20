@@ -1,10 +1,10 @@
 # J.A.R.V.I.S. Architecture
 ## Just A Rather Very Intelligent System
 
-**Status:** ✅ Complete — all modules built
-**Last updated:** 2026-04-16
+**Status:** ✅ Complete — v8 Cognitive Kernel Deployed
+**Last updated:** 2026-04-20
 **Language:** Python
-**LLM:** Ollama + Mistral 7B (gemma4:latest)
+**LLM:** NVIDIA NIM Cascaded Stack (Nano, Super, Ultra, Safety)
 **Machine:** 24GB DDR5 RAM, RTX 3050 Laptop 6GB VRAM
 
 ---
@@ -24,13 +24,19 @@ JARVIS/
 ├── USER.md                   # User profile (updated by JARVIS over time)
 │
 ├── core/
-│   ├── jarvis.py             # Central orchestrator — single hub for all modules
-│   ├── brain.py              # LLM interface (Ollama + Mistral 7B, streaming)
+│   ├── jarvis.py             # Central orchestrator — hub for all modules
+│   ├── brain.py              # Intelligence Engine (NIM Cascaded Stack)
+│   ├── cognition.py          # Cognitive Kernel v8 (Unified sampled loop)
 │   ├── memory.py             # Daily logs + Memory Palace
-│   ├── context_loader.py     # Assembles dynamic system prompt from identity files
+│   ├── goal_manager.py       # Persistent Goal System (memory/palace/goals.json)
+│   ├── intentions.py         # Intention Engine (User unspoken goal tracking)
+│   ├── planning.py           # Planning Engine (Hierarchical task decomposition)
+│   ├── world_model.py        # World Model (State transition simulation)
+│   ├── meta_control.py       # Meta-Control (Cognitive drift self-correction)
+│   ├── context_loader.py     # dynamic system prompt builder
 │   ├── task_tracker.py       # Task queue, self-ping, stall detection
-│   ├── agent_manager.py      # Agent pool (20 max, 5 parallel), auto-queue
-│   └── config_manager.py     # Hot-reloading config — all modules read from here
+│   ├── agent_manager.py      # Agent pool (20 max, 5 parallel)
+│   └── config_manager.py     # hot-reload config manager
 │
 ├── senses/
 │   ├── ears.py               # Whisper STT (faster-whisper, local)
@@ -122,11 +128,19 @@ JARVIS/
 - Routes events between modules (task stall → notifier, wake word → ears)
 
 ### `core/brain.py`
-- Wraps Ollama API
-- Streaming responses (word-by-word)
-- Conversation history management
-- Tool-calling interface
-- System prompt via `context_loader` (not hardcoded)
+- Cascaded Intelligence Engine (Nano / Super / Ultra)
+- **Safety Gate**: Integrates `nemoguard-8b` for hard content filtering
+- **Triage Cortex**: `nemotron-nano-8b` for real-time triage
+- **Executive Reasoning**: `nemotron-super-49b` for tool selection and planning
+- **Deep Reflection**: `nemotron-ultra-253b` for uncertainty promotion
+- Streaming response management + Tool calling loop
+
+### `core/cognition.py`
+- The "Nervous System" of JARVIS.
+- **Unified Sampling Loop**: Runs every 10s to evaluate system state.
+- **Cognitive State Vector (CSV)**: Focus, Energy, Progress, Stability (continuous).
+- **Interrupt Budget**: Managed attention currency to prevent nagging.
+- **5-Layer Stack**: Sensory → Perception → Compression → Executive → Learning.
 
 ### `core/context_loader.py`
 - Reads `AGENTS.md` → discovers all instruction files
@@ -145,12 +159,22 @@ JARVIS/
 - Stall detection → fires callback → notifier alert
 - Summary injected into brain context before each response
 
-### `core/agent_manager.py`
-- Pool of up to 20 agents, 5 running in parallel
-- Auto-queues when parallel limit reached, auto-promotes when slot opens
-- Built-in work functions: `llm_work`, `research_work`, `monitor_work`
-- Inter-agent messaging + broadcast
-- Background monitor thread
+### `core/goal_manager.py`
+- Defines the "Will" and "Motivation" of JARVIS.
+- Persistent goal storage in `memory/palace/goals.json`.
+- Dynamic goal injection via the Executive Brain.
+
+### `core/intentions.py`
+- Intention Engine: Captures the 'Why' behind user actions.
+- Heuristically derives user unspoken goals from active context.
+
+### `core/planning.py`
+- Hierarchical Planning: Decomposes goals into tactical task graphs.
+- Manages sub-task dependencies for agents.
+
+### `core/meta_control.py`
+- Cognitive Self-Correction: Detects "Drift" between policy and user state.
+- Stabilizes behavioral biases (e.g., resets focus protection if user is frustrated).
 
 ### `senses/wake.py`
 - **OpenWakeWord** for "hey jarvis" detection (local, no API key, runs on CPU)
@@ -231,6 +255,8 @@ context_loader.py auto-discovers and loads them next session.
 | 15 | `ui/` | ✅ Done |
 | 16 | `system/` | ✅ Done |
 | 17 | `self_mod/` | ✅ Done |
+| 18 | `core/cognition.py` (Kernel v8) | ✅ Done |
+| 19 | Cascaded NIM Stack | ✅ Done |
 
 ---
 
@@ -239,11 +265,12 @@ context_loader.py auto-discovers and loads them next session.
 1. **Privacy first** — everything local, no cloud APIs required
 2. **Config-driven** — no hardcoded values; all settings in `config.yaml`, hot-reloaded
 3. **File-based identity** — JARVIS's personality, memory, and user knowledge live in files it can edit
-4. **Modular** — each module is independent; wired together via `core/jarvis.py`
-5. **Fail safe** — dangerous actions require confirmation; self-mod is sandboxed
-6. **Self-aware** — JARVIS knows what it can do and references it naturally
-7. **Persistent** — memory, tasks, and sessions survive restarts
-8. **Observable** — all actions logged; UI shows everything live
+4. **Cascaded Intelligence** — Tiered reasoning (Nano -> Super -> Ultra) for efficiency
+5. **Cognitive Persistence** — State-aware sampling loop + persistent Goal/Intention layers
+6. **Interrupt Safety** — Managed attention budget to protect user Flow
+7. **Modular** — Each module is independent; wired together via `core/jarvis.py`
+8. **Fail safe** — Dangerous actions require confirmation; self-mod is sandboxed
+9. **Persistent** — Memory, tasks, and goals survive restarts
 
 ---
 

@@ -22057,3 +22057,228 @@ JARVIS online.
 06:19:23 [INFO] jarvis.agent_manager: All running agents killed.
 06:19:23 [INFO] jarvis.agent_manager: Agent manager stopped.
 06:19:23 [INFO] jarvis.main: JARVIS offline.
+06:43:16 [INFO] jarvis.config: Config manager online.
+06:43:16 [INFO] jarvis.config: Config file watcher started.
+06:43:16 [INFO] jarvis.core: ==================================================
+06:43:16 [INFO] jarvis.core:   J.A.R.V.I.S. — Initializing
+06:43:16 [INFO] jarvis.core: ==================================================
+06:43:16 [INFO] jarvis.context_loader: Context loaded. Total length: 6090 chars.
+06:43:16 [INFO] jarvis.core:   [1/5] Context synchronized (Focus: default)
+06:43:16 [INFO] jarvis.memory: Memory system online.
+06:43:16 [INFO] jarvis.memory: Memory system online.
+06:43:16 [INFO] jarvis.core:   [2/5] Memory online
+06:43:16 [INFO] jarvis.agent_manager: Agent manager online. Max: 20, parallel: 5
+06:43:16 [INFO] jarvis.core:   [+] Tools registered
+06:43:16 [INFO] jarvis.brain: Brain online. Cascaded Stack: ['nano', 'super', 'ultra', 'embed', 'vision', 'safety']. Clients: 5
+06:43:16 [INFO] jarvis.brain: Brain online. Cascaded Stack: ['nano', 'super', 'ultra', 'embed', 'vision', 'safety']. Clients: 5
+06:43:16 [INFO] jarvis.core:   [3/5] Brain online
+06:43:16 [INFO] jarvis.monitor: System monitor started (interval: 2s)
+06:43:16 [INFO] jarvis.core:   [3.5/5] System monitor active
+06:43:16 [INFO] jarvis.task_tracker: Task tracker online.
+06:43:16 [INFO] jarvis.task_tracker: Task tracker online.
+06:43:16 [INFO] jarvis.task_tracker: Self-ping thread started (interval: 60s)
+06:43:16 [INFO] jarvis.core:   [4/5] Task tracker online
+06:43:16 [INFO] jarvis.agent_manager: Agent manager monitor started.
+06:43:16 [INFO] jarvis.core:   [5/5] Agent manager online
+06:43:16 [INFO] jarvis.skills.manager: ClawHub CLI found.
+06:43:16 [INFO] jarvis.skills: Skill loaded: awesome-skills (MD only)
+06:43:16 [INFO] jarvis.skills: Skill loaded: desearch-web-search (MD only)
+06:43:16 [INFO] jarvis.skills: Skill loaded: find-skills-skill (MD only)
+06:43:16 [INFO] jarvis.skills: Skill loaded: local-web-search-skill (MD only)
+06:43:16 [INFO] jarvis.skills: Skill loaded: skill-manager (MD only)
+06:43:16 [INFO] jarvis.skills: Skill loaded: skill-miner (MD only)
+06:43:16 [INFO] jarvis.skills: Skill loaded: writing-skills (MD only)
+06:43:16 [INFO] jarvis.skills: Skills loaded: 7 (['awesome-skills', 'desearch-web-search', 'find-skills-skill', 'local-web-search-skill', 'skill-manager', 'skill-miner', 'writing-skills'])
+06:43:16 [INFO] jarvis.core:   [+] Skills loaded: 7 skill(s)
+06:43:16 [INFO] jarvis.cognition: Cognition: Nervous system online (Loop starting).
+06:43:16 [INFO] jarvis.core:   [6/5] Cognition loop active (Nervous system online)
+06:43:16 [INFO] jarvis.core: ==================================================
+06:43:16 [INFO] jarvis.core:   J.A.R.V.I.S. — Online
+06:43:16 [INFO] jarvis.core: ==================================================
+06:43:16 [INFO] jarvis.main: Initializing senses...
+06:43:16 [INFO] jarvis.camera: Camera module ready. Device: 0, Resolution: (640, 480)
+06:43:16 [INFO] jarvis.voice: Voice engine worker thread online.
+06:43:16 [INFO] jarvis.voice: Voice online. Voice: en-GB-RyanNeural, Rate: +0%
+06:43:16 [INFO] jarvis.core:   [senses] Voice online
+06:43:16 [INFO] jarvis.camera: Camera available at device 0.
+06:43:17 [INFO] jarvis.ears: Loading Whisper model: base.en on cuda...
+06:43:17 [ERROR] jarvis.cognition: Kernel loop maintenance error: 'CognitiveState' object has no attribute 'get'
+06:43:18 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+06:43:18 [INFO] jarvis.ears: Whisper loaded on cuda.
+06:43:18 [INFO] jarvis.mic_bridge: Opening master microphone stream...
+06:43:18 [INFO] jarvis.ears: Interruption monitor active.
+06:43:18 [INFO] jarvis.core:   [senses] Ears online
+06:43:18 [INFO] jarvis.eyes: Eyes online. Monitor: 1, change threshold: 2%
+06:43:18 [INFO] jarvis.core:   [senses] Eyes online
+06:43:18 [INFO] jarvis.wake: Wake listener ready. Wake words: ['hey_jarvis_v0.1'] | Hotkey: ctrl+space
+06:43:18 [INFO] jarvis.wake: Starting auditory sensors...
+06:43:18 [INFO] jarvis.mic_bridge: Master microphone stream active.
+06:43:18 [INFO] jarvis.wake: Loading OpenWakeWord models: ['/home/lucifer/.local/lib/python3.12/site-packages/openwakeword/resources/models/hey_jarvis_v0.1.onnx']...
+06:43:19 [INFO] jarvis.wake: OpenWakeWord models loaded successfully.
+06:43:19 [INFO] jarvis.wake: Wake word listener subscribed to master mic stream.
+06:43:19 [WARNING] jarvis.wake: Hotkey disabled: 'keyboard' library requires root (sudo) on Linux.
+06:43:19 [INFO] jarvis.wake: Wake listener fully active.
+06:43:19 [INFO] jarvis.core:   [senses] Wake listener online
+06:43:19 [INFO] jarvis.main: Initializing notifications...
+06:43:19 [INFO] jarvis.notifier: Notifier online.
+06:43:19 [INFO] jarvis.notifier: Notifier online.
+06:43:19 [INFO] jarvis.core:   [notif] Notifier online
+06:43:19 [INFO] jarvis.main: Initializing UI...
+06:43:19 [INFO] jarvis.core:   [ui] UI server ready at http://127.0.0.1:8090
+06:43:19 [INFO] jarvis.voice: Vocal directive queued: JARVIS online. Good to be back, sir....
+06:43:19 [INFO] jarvis.main: JARVIS boot complete.
+06:43:19 [INFO] jarvis.main: Starting UI at http://127.0.0.1:8090
+06:43:20 [INFO] jarvis.voice: Vocalizing: JARVIS online. Good to be back, sir....
+06:43:20 [INFO] jarvis.voice: Vocal baseline set: 0.0686
+06:43:20 [INFO] jarvis.ui: UI server starting at http://127.0.0.1:8090
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/ "HTTP/1.1 200 OK"
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/index-DairGiI4.js "HTTP/1.1 200 OK"
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/index-vXX7oHpk.js "HTTP/1.1 200 OK"
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/Widget-BYB5vu-w.js "HTTP/1.1 200 OK"
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/StatTile-CSJG-IRD.js "HTTP/1.1 200 OK"
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/Badge-BU73RuIU.js "HTTP/1.1 200 OK"
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/useSystemStats-B0W1YEfi.js "HTTP/1.1 200 OK"
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/styles-BMK2O2Je.css "HTTP/1.1 200 OK"
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/useJarvisLogs-BAYwI9Di.js "HTTP/1.1 200 OK"
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/activity-DaZD2mT4.js "HTTP/1.1 200 OK"
+06:43:21 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/styles-BMK2O2Je.css "HTTP/1.1 200 OK"
+06:43:24 [INFO] jarvis.voice: Vocalization complete.
+06:43:25 [INFO] jarvis.ui.chat: Chat WebSocket connected.
+06:43:25 [INFO] jarvis.ui.chat: Chat WebSocket connected (Session: default)
+06:43:26 [INFO] httpx: HTTP Request: GET http://localhost:3000/tasks "HTTP/1.1 200 OK"
+06:43:26 [INFO] jarvis.ui.chat: Chat WebSocket disconnected.
+06:43:26 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/index-DairGiI4.js "HTTP/1.1 200 OK"
+06:43:26 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/tasks-DRK9AFWO.js "HTTP/1.1 200 OK"
+06:43:26 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/Widget-BYB5vu-w.js "HTTP/1.1 200 OK"
+06:43:26 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/Badge-BU73RuIU.js "HTTP/1.1 200 OK"
+06:43:26 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/FormGroup-BLewrVNH.js "HTTP/1.1 200 OK"
+06:43:26 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/plus-CZSEwpCx.js "HTTP/1.1 200 OK"
+06:43:26 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/styles-BMK2O2Je.css "HTTP/1.1 200 OK"
+06:43:26 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/trash-2-BKhze4SN.js "HTTP/1.1 200 OK"
+06:43:26 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/styles-BMK2O2Je.css "HTTP/1.1 200 OK"
+06:43:27 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/index-vXX7oHpk.js "HTTP/1.1 200 OK"
+06:43:27 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/useSystemStats-B0W1YEfi.js "HTTP/1.1 200 OK"
+06:43:27 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/StatTile-CSJG-IRD.js "HTTP/1.1 200 OK"
+06:43:27 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/useJarvisLogs-BAYwI9Di.js "HTTP/1.1 200 OK"
+06:43:27 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/activity-DaZD2mT4.js "HTTP/1.1 200 OK"
+06:43:28 [ERROR] jarvis.cognition: Kernel loop maintenance error: 'CognitiveState' object has no attribute 'get'
+06:43:38 [ERROR] jarvis.cognition: Kernel loop maintenance error: 'CognitiveState' object has no attribute 'get'
+06:43:49 [ERROR] jarvis.cognition: Kernel loop maintenance error: 'CognitiveState' object has no attribute 'get'
+06:43:54 [INFO] jarvis.task_tracker: Self-ping thread stopped.
+06:43:54 [INFO] jarvis.agent_manager: All running agents killed.
+06:43:54 [INFO] jarvis.agent_manager: Agent manager stopped.
+06:43:54 [INFO] jarvis.main: JARVIS offline.
+06:45:03 [INFO] jarvis.config: Config manager online.
+06:45:03 [INFO] jarvis.config: Config file watcher started.
+06:45:03 [INFO] jarvis.core: ==================================================
+06:45:03 [INFO] jarvis.core:   J.A.R.V.I.S. — Initializing
+06:45:03 [INFO] jarvis.core: ==================================================
+06:45:03 [INFO] jarvis.context_loader: Context loaded. Total length: 6124 chars.
+06:45:03 [INFO] jarvis.core:   [1/5] Context synchronized (Focus: default)
+06:45:03 [INFO] jarvis.memory: Memory system online.
+06:45:03 [INFO] jarvis.memory: Memory system online.
+06:45:03 [INFO] jarvis.core:   [2/5] Memory online
+06:45:03 [INFO] jarvis.agent_manager: Agent manager online. Max: 20, parallel: 5
+06:45:03 [INFO] jarvis.core:   [+] Tools registered
+06:45:03 [INFO] jarvis.brain: Brain online. Cascaded Stack: ['nano', 'super', 'ultra', 'embed', 'vision', 'safety']. Clients: 5
+06:45:03 [INFO] jarvis.brain: Brain online. Cascaded Stack: ['nano', 'super', 'ultra', 'embed', 'vision', 'safety']. Clients: 5
+06:45:03 [INFO] jarvis.core:   [3/5] Brain online
+06:45:03 [INFO] jarvis.monitor: System monitor started (interval: 2s)
+06:45:03 [INFO] jarvis.core:   [3.5/5] System monitor active
+06:45:03 [INFO] jarvis.task_tracker: Task tracker online.
+06:45:03 [INFO] jarvis.task_tracker: Task tracker online.
+06:45:03 [INFO] jarvis.task_tracker: Self-ping thread started (interval: 60s)
+06:45:03 [INFO] jarvis.core:   [4/5] Task tracker online
+06:45:03 [INFO] jarvis.agent_manager: Agent manager monitor started.
+06:45:03 [INFO] jarvis.core:   [5/5] Agent manager online
+06:45:03 [INFO] jarvis.skills.manager: ClawHub CLI found.
+06:45:03 [INFO] jarvis.skills: Skill loaded: awesome-skills (MD only)
+06:45:03 [INFO] jarvis.skills: Skill loaded: desearch-web-search (MD only)
+06:45:03 [INFO] jarvis.skills: Skill loaded: find-skills-skill (MD only)
+06:45:03 [INFO] jarvis.skills: Skill loaded: local-web-search-skill (MD only)
+06:45:03 [INFO] jarvis.skills: Skill loaded: skill-manager (MD only)
+06:45:03 [INFO] jarvis.skills: Skill loaded: skill-miner (MD only)
+06:45:03 [INFO] jarvis.skills: Skill loaded: writing-skills (MD only)
+06:45:03 [INFO] jarvis.skills: Skills loaded: 7 (['awesome-skills', 'desearch-web-search', 'find-skills-skill', 'local-web-search-skill', 'skill-manager', 'skill-miner', 'writing-skills'])
+06:45:03 [INFO] jarvis.core:   [+] Skills loaded: 7 skill(s)
+06:45:03 [INFO] jarvis.cognition: Cognition: Nervous system online (Loop starting).
+06:45:03 [INFO] jarvis.core:   [6/5] Cognition loop active (Nervous system online)
+06:45:03 [INFO] jarvis.core: ==================================================
+06:45:03 [INFO] jarvis.core:   J.A.R.V.I.S. — Online
+06:45:03 [INFO] jarvis.core: ==================================================
+06:45:03 [INFO] jarvis.main: Initializing senses...
+06:45:03 [INFO] jarvis.camera: Camera module ready. Device: 0, Resolution: (640, 480)
+06:45:03 [INFO] jarvis.voice: Voice engine worker thread online.
+06:45:03 [INFO] jarvis.voice: Voice online. Voice: en-GB-RyanNeural, Rate: +0%
+06:45:03 [INFO] jarvis.core:   [senses] Voice online
+06:45:03 [INFO] jarvis.camera: Camera available at device 0.
+06:45:04 [INFO] jarvis.ears: Loading Whisper model: base.en on cuda...
+06:45:05 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/Systran/faster-whisper-base.en/revision/main "HTTP/1.1 200 OK"
+06:45:05 [INFO] jarvis.ears: Whisper loaded on cuda.
+06:45:05 [INFO] jarvis.mic_bridge: Opening master microphone stream...
+06:45:05 [INFO] jarvis.ears: Interruption monitor active.
+06:45:05 [INFO] jarvis.core:   [senses] Ears online
+06:45:05 [INFO] jarvis.eyes: Eyes online. Monitor: 1, change threshold: 2%
+06:45:05 [INFO] jarvis.core:   [senses] Eyes online
+06:45:05 [INFO] jarvis.wake: Wake listener ready. Wake words: ['hey_jarvis_v0.1'] | Hotkey: ctrl+space
+06:45:05 [INFO] jarvis.wake: Starting auditory sensors...
+06:45:05 [INFO] jarvis.mic_bridge: Master microphone stream active.
+06:45:05 [INFO] jarvis.wake: Loading OpenWakeWord models: ['/home/lucifer/.local/lib/python3.12/site-packages/openwakeword/resources/models/hey_jarvis_v0.1.onnx']...
+06:45:06 [INFO] jarvis.wake: OpenWakeWord models loaded successfully.
+06:45:06 [INFO] jarvis.wake: Wake word listener subscribed to master mic stream.
+06:45:06 [WARNING] jarvis.wake: Hotkey disabled: 'keyboard' library requires root (sudo) on Linux.
+06:45:06 [INFO] jarvis.wake: Wake listener fully active.
+06:45:06 [INFO] jarvis.core:   [senses] Wake listener online
+06:45:06 [INFO] jarvis.main: Initializing notifications...
+06:45:06 [INFO] jarvis.notifier: Notifier online.
+06:45:06 [INFO] jarvis.notifier: Notifier online.
+06:45:06 [INFO] jarvis.core:   [notif] Notifier online
+06:45:06 [INFO] jarvis.main: Initializing UI...
+06:45:06 [INFO] jarvis.core:   [ui] UI server ready at http://127.0.0.1:8090
+06:45:06 [INFO] jarvis.voice: Vocal directive queued: JARVIS online. Good to be back, sir....
+06:45:06 [INFO] jarvis.main: JARVIS boot complete.
+06:45:06 [INFO] jarvis.main: Starting UI at http://127.0.0.1:8090
+06:45:06 [INFO] jarvis.voice: Vocalizing: JARVIS online. Good to be back, sir....
+06:45:06 [INFO] jarvis.voice: Vocal baseline set: 0.0686
+06:45:07 [INFO] jarvis.ui: UI server starting at http://127.0.0.1:8090
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/ "HTTP/1.1 200 OK"
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/index-DairGiI4.js "HTTP/1.1 200 OK"
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/index-vXX7oHpk.js "HTTP/1.1 200 OK"
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/Widget-BYB5vu-w.js "HTTP/1.1 200 OK"
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/StatTile-CSJG-IRD.js "HTTP/1.1 200 OK"
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/Badge-BU73RuIU.js "HTTP/1.1 200 OK"
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/useSystemStats-B0W1YEfi.js "HTTP/1.1 200 OK"
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/styles-BMK2O2Je.css "HTTP/1.1 200 OK"
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/useJarvisLogs-BAYwI9Di.js "HTTP/1.1 200 OK"
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/activity-DaZD2mT4.js "HTTP/1.1 200 OK"
+06:45:08 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/styles-BMK2O2Je.css "HTTP/1.1 200 OK"
+06:45:11 [INFO] jarvis.voice: Vocalization complete.
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/ "HTTP/1.1 200 OK"
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/index-DairGiI4.js "HTTP/1.1 200 OK"
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/Widget-BYB5vu-w.js "HTTP/1.1 200 OK"
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/index-vXX7oHpk.js "HTTP/1.1 200 OK"
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/StatTile-CSJG-IRD.js "HTTP/1.1 200 OK"
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/Badge-BU73RuIU.js "HTTP/1.1 200 OK"
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/useSystemStats-B0W1YEfi.js "HTTP/1.1 200 OK"
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/styles-BMK2O2Je.css "HTTP/1.1 200 OK"
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/useJarvisLogs-BAYwI9Di.js "HTTP/1.1 200 OK"
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/activity-DaZD2mT4.js "HTTP/1.1 200 OK"
+06:45:11 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/styles-BMK2O2Je.css "HTTP/1.1 200 OK"
+06:45:15 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:45:26 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:45:36 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:45:47 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:45:56 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/chat-BED6KU3u.js "HTTP/1.1 200 OK"
+06:45:56 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/FormGroup-BLewrVNH.js "HTTP/1.1 200 OK"
+06:45:56 [INFO] httpx: HTTP Request: GET http://localhost:3000/assets/terminal-Cn9kd7g7.js "HTTP/1.1 200 OK"
+06:45:56 [INFO] jarvis.ui.chat: Chat WebSocket connected.
+06:45:56 [INFO] jarvis.ui.chat: Chat WebSocket connected (Session: default)
+06:45:57 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:45:57 [INFO] jarvis.cognition: Cognitive Heartbeat: Focus=1.00, Intent=deep_work (0.9), Control Stability: Optimal
+06:46:08 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:46:08 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:46:19 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:46:29 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:46:40 [INFO] jarvis.camera: User presence confirmed (1 face(s)).
+06:46:40 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.
+06:46:50 [WARNING] jarvis.meta: Cognitive Drift Detected: 0.40. Meta-correction triggered.

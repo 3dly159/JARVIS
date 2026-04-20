@@ -11,21 +11,22 @@ A fully local, privacy-first personal AI assistant. JARVIS can speak, listen, se
 
 | Capability | Details |
 |-----------|---------|
-| 🧠 **Brain** | Ollama + Mistral 7B, streaming responses, MCU JARVIS personality |
-| 🧠 **Memory** | Daily log files + Memory Palace (long-term tagged storage) |
+| 🧠 **Brain** | NVIDIA NIM Cascaded Stack (Nano, Super, Ultra, Safety) |
+| 🧠 **Cognition** | Kernel v8: 5-layer autonomous stack with predictive simulation |
+| 🧠 **Memory** | Daily logs + Memory Palace (long-term tagged storage) |
 | 🗣️ **Voice** | Microsoft Edge TTS — British male (en-GB-RyanNeural) |
 | 👂 **Ears** | Local Whisper STT via faster-whisper (CUDA-accelerated) |
 | 🔔 **Wake** | OpenWakeWord ("Hey JARVIS") + configurable hotkey |
 | 👁️ **Eyes** | Live screen capture with smart change detection |
-| 📷 **Camera** | On-demand camera capture via OpenCV |
+| 🕹️ **Executive** | Managed Interrupt Budget + Strategic Goal/Intention layers |
 | ⚡ **Actions** | Shell commands, file ops, keyboard/mouse, app control |
 | 🔧 **Tools** | Web search, file browser, browser automation (Playwright) |
 | 🤖 **Agents** | Up to 20 agents, 5 running in parallel, auto-queued |
-| 📋 **Tasks** | Autonomous task tracking with self-ping and stall detection |
+| 📋 **Tasks** | Autonomous task tracking with planning & decomposition |
 | 🔄 **Self-mod** | JARVIS reads and edits its own codebase (sandboxed + backed up) |
 | 🖥️ **UI** | Web dashboard at localhost:8090 (chat, tasks, agents, memory, settings) |
 | ⚙️ **Config** | Hot-reloading config — change settings live without restart |
-| 🛡️ **Privacy** | Fully local — nothing leaves your machine |
+| 🛡️ **Privacy** | Encrypted NIM API + Local sensors — nothing stored in cloud |
 
 ---
 
@@ -89,10 +90,16 @@ JARVIS/
 │
 ├── core/
 │   ├── jarvis.py             # Central orchestrator
-│   ├── brain.py              # LLM interface (Ollama)
+│   ├── brain.py              # Intelligence Engine (NIM Cascade)
+│   ├── cognition.py          # Cognitive Kernel v8
+│   ├── intentions.py         # Intention Engine
+│   ├── goal_manager.py       # Persistent Goal System
+│   ├── planning.py           # Planning Engine
+│   ├── world_model.py        # World Model (Simulation)
+│   ├── meta_control.py       # Meta-Control (Stabilization)
 │   ├── memory.py             # Daily logs + Memory Palace
-│   ├── context_loader.py     # Dynamic system prompt from files
-│   ├── task_tracker.py       # Autonomous task management
+│   ├── context_loader.py     # Prompt assembly
+│   ├── task_tracker.py       # Task management
 │   ├── agent_manager.py      # Multi-agent pool
 │   └── config_manager.py     # Hot-reload config
 │
@@ -149,15 +156,13 @@ All settings live in `config.yaml`. Edit directly or use the Settings panel in t
 Key settings:
 
 ```yaml
-llm:
-  model: "gemma4:latest"
+nvidia:
+  tiers:
+    nano:    "nvidia/nemotron-nano-8b-v1"
+    super:   "nvidia/nemotron-super-49b-v1.5"
+    ultra:   "nvidia/nemotron-ultra-253b-v1"
+    safety:  "llama-3.1-nemoguard-8b-content-safety"
   temperature: 0.7
-
-voice:
-  tts_voice: "en-GB-RyanNeural"
-  stt_model: "base.en"
-  wake_word: "hey jarvis"
-  hotkey: "ctrl+space"
 
 ui:
   port: 8090
@@ -211,24 +216,24 @@ python senses/camera.py      # Test camera
 
 ## Roadmap
 
-- [ ] Skills system (auto-loading skill modules)
+- [x] Skills system (auto-loading skill modules)
 - [ ] Calendar & email integration
 - [ ] Multi-monitor support
-- [ ] Voice confirmation for dangerous actions
-- [ ] JARVIS-initiated conversation (proactive suggestions)
-- [ ] Fine-tuned model on user interaction history
+- [x] Voice confirmation for dangerous actions
+- [x] JARVIS-initiated conversation (proactive executive mind)
+- [ ] Real-time vision-driven UI navigation
 
 ---
 
 ## Privacy
 
-Everything runs locally:
-- LLM: Ollama (local)
+Everything aligns with local-first principles:
+- LLM: NVIDIA NIM (Encrypted API)
 - STT: faster-whisper (local)
-- TTS: Edge TTS (requires internet for synthesis)
+- TTS: Edge TTS (cloud synthesis)
 - Wake word: OpenWakeWord (local, CPU)
-- Search: DuckDuckGo (no API key, minimal tracking)
-- No telemetry, no accounts, no cloud storage
+- Search: DuckDuckGo (minimal tracking)
+- No telemetry, no accounts, no persistent cloud storage
 
 ---
 
